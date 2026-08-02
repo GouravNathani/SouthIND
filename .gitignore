@@ -18,3 +18,4 @@ dev-dist/
 /Backend/public/hot
 /User/.env.local
 /Admin/.env.local
+/SuperAdmin/.env.local
