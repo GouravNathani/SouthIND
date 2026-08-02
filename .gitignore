@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dev-dist/
+.DS_Store
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+/Backend/vendor/
+/Backend/storage/*.key
+/Backend/storage/logs/*
+/Backend/storage/framework/cache/*
+/Backend/storage/framework/sessions/*
+/Backend/storage/framework/views/*
+/Backend/public/storage
+/Backend/database/*.sqlite

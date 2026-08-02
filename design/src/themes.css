@@ -1,0 +1,316 @@
+/* ============================================================================
+   SouthIND — theme tokens
+   ----------------------------------------------------------------------------
+   THREE colour skins × TWO modes. All six ship in the product; the user picks a
+   skin and a mode at runtime and the choice is persisted.
+
+     [data-theme="midnight"]  emerald neon      — dark | light
+     [data-theme="temple"]    South Indian gold — dark | light
+     [data-theme="ledger"]    clean fintech     — dark | light
+
+   Every theme is ONLY a set of custom properties. No component ever hardcodes a
+   colour, radius, shadow or duration — it reads a token. That is what makes six
+   variants cost the same as one.
+
+   Contrast: each mode's --accent is chosen so white/dark --text-on-accent clears
+   4.5:1 on it, and so the accent itself clears 4.5:1 on --bg (accents are used
+   for amounts and links, not just button fills).
+
+   Tailwind v4 note: these map 1:1 into `@theme inline { --color-*: var(--*) }`
+   in the real apps, so utilities like `bg-surface` / `text-muted` work.
+   ========================================================================== */
+
+:root {
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-full: 999px;
+
+  --dur-fast: 140ms;
+  --dur: 220ms;
+  --dur-slow: 380ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --font-sans: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --rail-w: 76px;
+  --rail-w-open: 232px;
+  --topbar-h: 64px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   A — MIDNIGHT :: emerald neon
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── dark ── near-black, frosted glass, neon emerald with a gold highlight */
+[data-theme="midnight"] {
+  --bg: #07080b;
+  --bg-grad: radial-gradient(1200px 600px at 15% -10%, #10233022 0%, transparent 60%),
+             radial-gradient(900px 500px at 95% 10%, #0e2b2122 0%, transparent 55%);
+  --bg-elev: #0c0e13;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-2: rgba(255, 255, 255, 0.075);
+  --surface-solid: #111420;
+  --blur: 18px;
+
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.18);
+
+  --text: #f2f5f9;
+  --text-muted: #8b93a7;
+  --text-faint: #5b6376;
+  --text-on-accent: #04120c;
+
+  --accent: #00e5a0;
+  --accent-hover: #2af0b3;
+  --accent-soft: rgba(0, 229, 160, 0.13);
+  --accent-line: rgba(0, 229, 160, 0.35);
+  --accent-2: #ffc94d;
+  --accent-2-soft: rgba(255, 201, 77, 0.14);
+
+  --pos: #34e39b;
+  --neg: #ff6b6b;
+  --warn: #ffc94d;
+  --info: #62b8ff;
+
+  --sh-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --sh-md: 0 10px 30px rgba(0, 0, 0, 0.55);
+  --sh-lg: 0 28px 70px rgba(0, 0, 0, 0.6);
+  --sh-glow: 0 0 0 1px var(--accent-line), 0 10px 40px rgba(0, 229, 160, 0.22);
+
+  --chart-1: #00e5a0;
+  --chart-2: #62b8ff;
+  --chart-3: #ffc94d;
+  --chart-4: #b48cff;
+}
+
+/* ── light ── the same emerald identity, inverted: cool paper, deepened accent
+   (neon #00e5a0 on white is ~1.6:1 — unusable), crisp hairlines, no glow. */
+[data-theme="midnight"][data-mode="light"] {
+  --bg: #f3f7f5;
+  --bg-grad: radial-gradient(1100px 560px at 12% -10%, #05875e0e 0%, transparent 62%),
+             radial-gradient(820px 480px at 98% 6%, #a86b000a 0%, transparent 58%);
+  --bg-elev: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #eef3f1;
+  --surface-solid: #ffffff;
+  --blur: 10px;
+
+  --border: #e0e8e5;
+  --border-strong: #c6d3cf;
+
+  --text: #0c1614;
+  --text-muted: #566762;
+  --text-faint: #899893;
+  --text-on-accent: #ffffff;
+
+  --accent: #05875e;
+  --accent-hover: #046d4c;
+  --accent-soft: rgba(5, 135, 94, 0.1);
+  --accent-line: rgba(5, 135, 94, 0.26);
+  --accent-2: #a06400;
+  --accent-2-soft: rgba(160, 100, 0, 0.1);
+
+  --pos: #05875e;
+  --neg: #c62f28;
+  --warn: #a06400;
+  --info: #1566c2;
+
+  --sh-sm: 0 1px 2px rgba(12, 30, 25, 0.06);
+  --sh-md: 0 6px 20px rgba(12, 30, 25, 0.08);
+  --sh-lg: 0 22px 50px rgba(12, 30, 25, 0.12);
+  --sh-glow: 0 0 0 1px var(--accent-line), 0 8px 22px rgba(5, 135, 94, 0.18);
+
+  --chart-1: #05875e;
+  --chart-2: #1566c2;
+  --chart-3: #a06400;
+  --chart-4: #6d43c0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   B — TEMPLE :: South Indian heritage
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── dark ── sandalwood base, temple gold primary, kumkum red accent, gold
+   hairlines instead of glow */
+[data-theme="temple"] {
+  --bg: #170d0a;
+  --bg-grad: radial-gradient(1000px 520px at 10% -5%, #3a201640 0%, transparent 60%),
+             radial-gradient(800px 460px at 100% 5%, #4a2a1030 0%, transparent 55%);
+  --bg-elev: #1e120d;
+  --surface: #26150f;
+  --surface-2: #321c14;
+  --surface-solid: #26150f;
+  --blur: 0px;
+
+  --border: rgba(212, 175, 55, 0.2);
+  --border-strong: rgba(212, 175, 55, 0.45);
+
+  --text: #fdf3e3;
+  --text-muted: #c2a08f;
+  --text-faint: #8d6d5e;
+  --text-on-accent: #1b0f06;
+
+  --accent: #d4af37;
+  --accent-hover: #e6c65a;
+  --accent-soft: rgba(212, 175, 55, 0.14);
+  --accent-line: rgba(212, 175, 55, 0.4);
+  --accent-2: #e0455e;
+  --accent-2-soft: rgba(224, 69, 94, 0.16);
+
+  --pos: #8fbf6f;
+  --neg: #e05263;
+  --warn: #e8a33d;
+  --info: #d4af37;
+
+  --sh-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --sh-md: 0 12px 30px rgba(30, 8, 0, 0.5);
+  --sh-lg: 0 30px 70px rgba(30, 8, 0, 0.58);
+  --sh-glow: 0 0 0 1px var(--accent-line), 0 8px 30px rgba(212, 175, 55, 0.16);
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+
+  --chart-1: #d4af37;
+  --chart-2: #e0455e;
+  --chart-3: #8fbf6f;
+  --chart-4: #e0854a;
+}
+
+/* ── light ── ivory / sandalwood paper with bronze-gold. Bright #d4af37 on cream
+   is ~1.9:1, so the working accent deepens to antique bronze; the bright leaf
+   gold survives only as a decorative hairline. Reads like a wedding invite. */
+[data-theme="temple"][data-mode="light"] {
+  --bg: #faf4e8;
+  --bg-grad: radial-gradient(1000px 520px at 10% -8%, #8a6d1f14 0%, transparent 62%),
+             radial-gradient(820px 460px at 100% 4%, #b0102910 0%, transparent 58%);
+  --bg-elev: #fffbf2;
+  --surface: #fffbf2;
+  --surface-2: #f4e9d6;
+  --surface-solid: #fffbf2;
+  --blur: 0px;
+
+  --border: rgba(138, 109, 31, 0.22);
+  --border-strong: rgba(138, 109, 31, 0.46);
+
+  --text: #241a0c;
+  --text-muted: #6b5a3e;
+  --text-faint: #998767;
+  --text-on-accent: #fffbf2;
+
+  --accent: #8a6d1f;
+  --accent-hover: #6f5717;
+  --accent-soft: rgba(138, 109, 31, 0.11);
+  --accent-line: rgba(138, 109, 31, 0.3);
+  --accent-2: #b01029;
+  --accent-2-soft: rgba(176, 16, 41, 0.1);
+
+  --pos: #4e7a38;
+  --neg: #b01029;
+  --warn: #9a6a12;
+  --info: #8a6d1f;
+
+  --sh-sm: 0 1px 2px rgba(60, 40, 10, 0.07);
+  --sh-md: 0 8px 22px rgba(60, 40, 10, 0.09);
+  --sh-lg: 0 24px 54px rgba(60, 40, 10, 0.13);
+  --sh-glow: 0 0 0 1px var(--accent-line), 0 8px 22px rgba(138, 109, 31, 0.16);
+
+  --chart-1: #8a6d1f;
+  --chart-2: #b01029;
+  --chart-3: #4e7a38;
+  --chart-4: #b06a2a;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   C — LEDGER :: clean fintech
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── dark ── neutral slate, one blue accent, whitespace-led */
+[data-theme="ledger"] {
+  --bg: #0d1117;
+  --bg-grad: none;
+  --bg-elev: #11161d;
+  --surface: #161b22;
+  --surface-2: #1c232c;
+  --surface-solid: #161b22;
+  --blur: 0px;
+
+  --border: #262c36;
+  --border-strong: #384049;
+
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-faint: #636c76;
+  --text-on-accent: #ffffff;
+
+  --accent: #3b82f6;
+  --accent-hover: #5a97f8;
+  --accent-soft: rgba(59, 130, 246, 0.15);
+  --accent-line: rgba(59, 130, 246, 0.4);
+  --accent-2: #8b5cf6;
+  --accent-2-soft: rgba(139, 92, 246, 0.15);
+
+  --pos: #3fb950;
+  --neg: #f85149;
+  --warn: #d29922;
+  --info: #58a6ff;
+
+  --sh-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sh-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --sh-lg: 0 24px 56px rgba(0, 0, 0, 0.45);
+  --sh-glow: 0 0 0 1px var(--accent-line);
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+
+  --chart-1: #3b82f6;
+  --chart-2: #8b5cf6;
+  --chart-3: #3fb950;
+  --chart-4: #d29922;
+}
+
+/* ── light ── */
+[data-theme="ledger"][data-mode="light"] {
+  --bg: #f6f8fa;
+  --bg-elev: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f0f3f6;
+  --surface-solid: #ffffff;
+
+  --border: #e2e6ea;
+  --border-strong: #cdd4db;
+
+  --text: #101828;
+  --text-muted: #667085;
+  --text-faint: #98a2b3;
+  --text-on-accent: #ffffff;
+
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: rgba(37, 99, 235, 0.09);
+  --accent-line: rgba(37, 99, 235, 0.28);
+  --accent-2: #7c3aed;
+  --accent-2-soft: rgba(124, 58, 237, 0.09);
+
+  --pos: #14915b;
+  --neg: #d92d20;
+  --warn: #b54708;
+  --info: #175cd3;
+
+  --sh-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --sh-md: 0 6px 20px rgba(16, 24, 40, 0.08);
+  --sh-lg: 0 20px 48px rgba(16, 24, 40, 0.12);
+  --sh-glow: 0 0 0 1px var(--accent-line);
+
+  --chart-1: #2563eb;
+  --chart-2: #7c3aed;
+  --chart-3: #14915b;
+  --chart-4: #b54708;
+}
