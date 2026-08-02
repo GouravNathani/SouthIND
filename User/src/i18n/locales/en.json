@@ -250,5 +250,11 @@
     "imageOnly": "Only image files can be attached.",
     "imageTooLarge": "That image is too large — keep it under 4 MB.",
     "imageReady": "Image ready to send"
+  },
+  "push": {
+    "title": "Turn on notifications",
+    "body": "Get told the moment a deposit or withdrawal is decided.",
+    "enable": "Enable",
+    "dismiss": "Not now"
   }
 }
