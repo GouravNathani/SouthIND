@@ -1,8 +1,10 @@
+import { useTranslation } from "react-i18next";
 import { SKINS, useTheme } from "@/theme/ThemeProvider";
 
 /** Skin picker + light/dark toggle. Lives on the Account page and nowhere else. */
 export default function ThemeSwitcher() {
   const { skin, mode, setSkin, toggleMode } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <div className="flex flex-col gap-4">
@@ -33,7 +35,7 @@ export default function ThemeSwitcher() {
         onClick={toggleMode}
         className="self-start rounded-full border border-border bg-surface px-4 py-2 text-sm text-text"
       >
-        {mode === "dark" ? "Switch to light" : "Switch to dark"}
+        {mode === "dark" ? t("common.lightMode") : t("common.darkMode")}
       </button>
     </div>
   );

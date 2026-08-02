@@ -4,7 +4,7 @@
     "logout": "लॉग आउट",
     "home": "होम",
     "history": "इतिहास",
-    "chat": "सहायता",
+    "chat": "सपोर्ट चैट",
     "deposit": "जमा",
     "withdraw": "निकासी",
     "balance": "बैलेंस",
@@ -22,12 +22,16 @@
     "amount": "राशि",
     "status": "स्थिति",
     "date": "तारीख",
-    "support": "सहायता",
+    "support": "सपोर्ट चैट",
     "viewAll": "सभी देखें",
     "remove": "हटाएँ",
     "unexpected": "कुछ अनपेक्षित हो गया।",
     "notFound": "पेज नहीं मिला",
-    "notFoundBody": "यह लिंक ऐप में कहीं नहीं जाता।"
+    "notFoundBody": "यह लिंक ऐप में कहीं नहीं जाता।",
+    "winners": "विजेता",
+    "account": "खाता",
+    "lightMode": "लाइट मोड",
+    "darkMode": "डार्क मोड"
   },
   "login": {
     "title": "साइन इन करें",

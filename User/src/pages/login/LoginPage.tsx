@@ -275,7 +275,7 @@ export default function LoginPage() {
                 autoComplete="tel"
                 value={phone}
                 maxLength={10}
-                placeholder="9876543210"
+                placeholder="9845127634"
                 onChange={(event) => setPhone(event.target.value.replace(/[^0-9]/g, ""))}
                 hint={checkingBranch && phone.length === 10 ? t("login.checkingBranch") : undefined}
                 required

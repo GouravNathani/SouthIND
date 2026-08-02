@@ -12,23 +12,25 @@ import {
   IconWithdraw,
 } from "@/components/icons";
 import { useTheme } from "@/theme/ThemeProvider";
+import { useTranslation } from "react-i18next";
 
 type NavEntry = {
   to: string;
-  label: string;
+  /** i18n key, resolved at render — the chrome has to follow the language too. */
+  labelKey: string;
   Icon: (props: { size?: number }) => ReactNode;
   /** Bottom tab bars hold five items comfortably; the rest live on the rail only. */
   tab?: boolean;
 };
 
 export const NAV: NavEntry[] = [
-  { to: "/dashboard", label: "Home", Icon: IconHome, tab: true },
-  { to: "/deposit", label: "Deposit", Icon: IconDeposit, tab: true },
-  { to: "/withdrawal", label: "Withdraw", Icon: IconWithdraw, tab: true },
-  { to: "/history", label: "History", Icon: IconHistory, tab: true },
-  { to: "/account", label: "Account", Icon: IconUser, tab: true },
-  { to: "/winners", label: "Winners", Icon: IconTrophy },
-  { to: "/chat", label: "Support", Icon: IconChat },
+  { to: "/dashboard", labelKey: "common.home", Icon: IconHome, tab: true },
+  { to: "/deposit", labelKey: "common.deposit", Icon: IconDeposit, tab: true },
+  { to: "/withdrawal", labelKey: "common.withdraw", Icon: IconWithdraw, tab: true },
+  { to: "/history", labelKey: "common.history", Icon: IconHistory, tab: true },
+  { to: "/account", labelKey: "common.account", Icon: IconUser, tab: true },
+  { to: "/winners", labelKey: "common.winners", Icon: IconTrophy },
+  { to: "/chat", labelKey: "common.support", Icon: IconChat },
 ];
 
 const TABS = NAV.filter((entry) => entry.tab);
@@ -59,6 +61,7 @@ export default function AppShell({
   fill?: boolean;
 }) {
   const [railOpen, setRailOpen] = useState(false);
+  const { t } = useTranslation();
   const { mode, toggleMode } = useTheme();
   const location = useLocation();
 
@@ -96,11 +99,11 @@ export default function AppShell({
           </span>
         </div>
 
-        {NAV.map(({ to, label, Icon }) => (
+        {NAV.map(({ to, labelKey, Icon }) => (
           <NavLink
             key={to}
             to={to}
-            title={label}
+            title={t(labelKey)}
             className={({ isActive }) =>
               [
                 "relative flex h-[46px] shrink-0 items-center gap-3.5 rounded-md px-3 whitespace-nowrap",
@@ -123,7 +126,7 @@ export default function AppShell({
                 railOpen ? "opacity-100" : "opacity-0",
               ].join(" ")}
             >
-              {label}
+              {t(labelKey)}
             </span>
           </NavLink>
         ))}
@@ -133,7 +136,7 @@ export default function AppShell({
         <button
           type="button"
           onClick={toggleMode}
-          title={mode === "dark" ? "Light mode" : "Dark mode"}
+          title={mode === "dark" ? t("common.lightMode") : t("common.darkMode")}
           className="flex h-[46px] shrink-0 items-center gap-3.5 rounded-md px-3 whitespace-nowrap text-muted transition-colors duration-150 hover:bg-surface hover:text-text"
         >
           <span className="shrink-0">{mode === "dark" ? <IconSun /> : <IconMoon />}</span>
@@ -143,7 +146,7 @@ export default function AppShell({
               railOpen ? "opacity-100" : "opacity-0",
             ].join(" ")}
           >
-            {mode === "dark" ? "Light mode" : "Dark mode"}
+            {mode === "dark" ? t("common.lightMode") : t("common.darkMode")}
           </span>
         </button>
       </nav>
@@ -154,7 +157,7 @@ export default function AppShell({
           <div className="mx-auto flex h-16 w-full max-w-5xl min-w-0 items-center gap-3 px-4">
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-base font-semibold">
-                {title ?? activeEntry?.label ?? "SouthIND"}
+                {title ?? (activeEntry ? t(activeEntry.labelKey) : "SouthIND")}
               </h1>
               {subtitle ? <p className="truncate text-xs text-muted">{subtitle}</p> : null}
             </div>
@@ -188,7 +191,7 @@ export default function AppShell({
         className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg-elev/95 backdrop-blur lg:hidden"
       >
         <ul className="mx-auto flex w-full max-w-5xl">
-          {TABS.map(({ to, label, Icon }) => (
+          {TABS.map(({ to, labelKey, Icon }) => (
             <li key={to} className="min-w-0 flex-1">
               <NavLink
                 to={to}
@@ -201,7 +204,7 @@ export default function AppShell({
               >
                 <Icon size={20} />
                 <span className="w-full truncate text-center text-[10.5px] font-medium">
-                  {label}
+                  {t(labelKey)}
                 </span>
               </NavLink>
             </li>

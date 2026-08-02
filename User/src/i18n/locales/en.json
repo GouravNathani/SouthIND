@@ -4,7 +4,7 @@
     "logout": "Logout",
     "home": "Home",
     "history": "History",
-    "chat": "Support",
+    "chat": "Support Chat",
     "deposit": "Deposit",
     "withdraw": "Withdraw",
     "balance": "Balance",
@@ -22,12 +22,16 @@
     "amount": "Amount",
     "status": "Status",
     "date": "Date",
-    "support": "Support",
+    "support": "Support Chat",
     "viewAll": "View all",
     "remove": "Remove",
     "unexpected": "Something unexpected happened.",
     "notFound": "Page not found",
-    "notFoundBody": "That link does not lead anywhere in the app."
+    "notFoundBody": "That link does not lead anywhere in the app.",
+    "winners": "Winners",
+    "account": "Account",
+    "lightMode": "Switch to light",
+    "darkMode": "Switch to dark"
   },
   "login": {
     "title": "Sign in",
