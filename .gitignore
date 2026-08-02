@@ -16,3 +16,4 @@ dev-dist/
 /Backend/database/*.sqlite
 /Backend/.env
 /Backend/public/hot
+/User/.env.local
