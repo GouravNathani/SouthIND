@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en" data-theme="ledger" data-mode="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d1117" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/conf/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/conf/icon-192.png" />
+    <title>SouthIND Admin</title>
+    <script>
+      // Applied before first paint so the shell never flashes the wrong skin.
+      // Admin defaults to Ledger — a back office is read all day and wants the
+      // flattest, least decorated of the three skins.
+      (function () {
+        try {
+          var t = localStorage.getItem("sind_admin_theme") || "ledger";
+          var m = localStorage.getItem("sind_admin_mode") || "dark";
+          document.documentElement.dataset.theme = t;
+          document.documentElement.dataset.mode = m;
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

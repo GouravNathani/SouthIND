@@ -17,3 +17,4 @@ dev-dist/
 /Backend/.env
 /Backend/public/hot
 /User/.env.local
+/Admin/.env.local
