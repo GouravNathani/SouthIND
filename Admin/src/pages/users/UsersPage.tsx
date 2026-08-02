@@ -178,7 +178,7 @@ export default function UsersPage() {
               <Input
                 label="Phone"
                 inputMode="numeric"
-                placeholder="9876543210"
+                placeholder="9845127634"
                 value={formPhone}
                 onChange={(event) => setFormPhone(sanitizePhone(event.target.value))}
                 required
