@@ -8,6 +8,7 @@ import {
 } from "@/services/api";
 import { useBranch } from "@/components/BranchContext";
 import { useTheme } from "@/theme/ThemeProvider";
+import { BrandMark } from "@/components/Brand";
 import {
   IconAccounts,
   IconAlert,
@@ -183,12 +184,7 @@ export default function SuperShell({
 
   const brand = (
     <div className="flex min-w-0 items-center gap-3 px-3 py-3">
-      <span
-        className="grid size-9 shrink-0 place-items-center rounded-md bg-accent text-sm font-extrabold text-on-accent"
-        style={{ boxShadow: "var(--sh-glow)" }}
-      >
-        S
-      </span>
+      <BrandMark size={36} />
       <span className="min-w-0 truncate text-[13px] font-bold tracking-[0.13em] uppercase">
         South<span className="text-accent">IND</span>
         <span className="ml-1.5 text-muted">Super</span>

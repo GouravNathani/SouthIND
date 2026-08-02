@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { WHATSAPP_LINK } from "@/config/env";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { BrandLockup, BrandMark } from "@/components/Brand";
 import Button from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
 import { ErrorNote } from "@/components/ui/Feedback";
@@ -229,17 +230,16 @@ export default function LoginPage() {
       <div className="w-full max-w-md min-w-0">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span
-              className="grid size-10 shrink-0 place-items-center rounded-md bg-accent text-base font-extrabold text-on-accent"
-              style={{ boxShadow: "var(--sh-glow)" }}
-            >
-              S
-            </span>
+            <BrandMark size={40} />
             <span className="truncate text-sm font-bold tracking-[0.13em] uppercase">
               South<span className="text-accent">IND</span>
             </span>
           </div>
           {chrome}
+        </div>
+
+        <div className="mb-4 flex justify-center">
+          <BrandLockup />
         </div>
 
         <div className="rounded-xl border border-border bg-surface p-6 shadow-lg sm:p-7">

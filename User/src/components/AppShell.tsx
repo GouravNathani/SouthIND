@@ -12,6 +12,7 @@ import {
   IconWithdraw,
 } from "@/components/icons";
 import { useTheme } from "@/theme/ThemeProvider";
+import { BrandMark } from "@/components/Brand";
 import { useTranslation } from "react-i18next";
 
 type NavEntry = {
@@ -83,12 +84,7 @@ export default function AppShell({
         style={{ transitionTimingFunction: "var(--ease)" }}
       >
         <div className="flex items-center gap-3 px-1.5 pt-1 pb-5 whitespace-nowrap">
-          <span
-            className="grid size-[34px] shrink-0 place-items-center rounded-md bg-accent text-[15px] font-extrabold text-on-accent"
-            style={{ boxShadow: "var(--sh-glow)" }}
-          >
-            S
-          </span>
+          <BrandMark size={34} />
           <span
             className={[
               "text-[13px] font-bold tracking-[0.13em] uppercase transition-opacity duration-150",

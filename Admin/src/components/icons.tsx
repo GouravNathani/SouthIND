@@ -159,3 +159,13 @@ export const IconEdit = ({ size = 16 }: P) => (
 export const IconTrash = ({ size = 16 }: P) => (
   <svg {...base(size)}><path d="M4 7h16" /><path d="M9 7V5h6v2" /><path d="M6.5 7 7.5 20h9L17.5 7" /></svg>
 );
+
+/**
+ * The brand mark: the heart cut out of the O in the SouthIND logo. Filled with
+ * currentColor so it takes the active skin's accent wherever it is placed.
+ */
+export const IconHeart = ({ size = 20 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M12 21.2c-.34 0-.67-.12-.93-.34C7.5 17.9 2.4 13.6 2.4 9.1 2.4 6.1 4.7 3.8 7.6 3.8c1.7 0 3.3.8 4.4 2.2 1.1-1.4 2.7-2.2 4.4-2.2 2.9 0 5.2 2.3 5.2 5.3 0 4.5-5.1 8.8-8.67 11.76-.26.22-.59.34-.93.34z" />
+  </svg>
+);

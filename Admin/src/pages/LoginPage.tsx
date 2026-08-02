@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Field";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { IconMoon, IconSun } from "@/components/icons";
 import { useTheme } from "@/theme/ThemeProvider";
+import { BrandLockup, BrandMark } from "@/components/Brand";
 
 const TOKEN_KEY = "sind-admin-token";
 
@@ -84,12 +85,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm min-w-0">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span
-              className="grid size-10 shrink-0 place-items-center rounded-md bg-accent text-base font-extrabold text-on-accent"
-              style={{ boxShadow: "var(--sh-glow)" }}
-            >
-              S
-            </span>
+            <BrandMark size={40} />
             <span className="truncate text-sm font-bold tracking-[0.13em] uppercase">
               South<span className="text-accent">IND</span>
               <span className="ml-1.5 text-muted">Admin</span>
@@ -103,6 +99,10 @@ export default function LoginPage() {
           >
             {mode === "dark" ? <IconSun /> : <IconMoon />}
           </button>
+        </div>
+
+        <div className="mb-4 flex justify-center">
+          <BrandLockup />
         </div>
 
         <form

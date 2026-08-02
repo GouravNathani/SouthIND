@@ -50,8 +50,8 @@ export default defineConfig(({ command }) => ({
         start_url: "/",
         scope: "/",
         display: "standalone",
-        background_color: "#0d1117",
-        theme_color: "#0d1117",
+        background_color: "#07080b",
+        theme_color: "#07080b",
         lang: "en-US",
         icons: [
           { src: "/conf/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

@@ -1,5 +1,9 @@
-// Generates the PWA icon set. Placeholder brand mark — an emerald ring on the
-// Midnight background — until real artwork lands. Run: node scripts/make-icons.mjs
+// Generates the PWA icon set: the brand heart in the logo's green, on the app's
+// dark background. Run: node scripts/make-icons.mjs
+//
+// The heart is drawn from the implicit curve (x²+y²−1)³ − x²y³ ≤ 0 rather than
+// traced from Logo.png, so it stays crisp at 192px and 512px alike. There is no
+// SVG rasteriser on the build host, hence the dependency-free PNG encoder below.
 import { deflateSync } from "node:zlib";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -8,8 +12,8 @@ import { fileURLToPath } from "node:url";
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), "../public/conf");
 
 const BG = [0x07, 0x08, 0x0b];
-const ACCENT = [0x00, 0xe5, 0xa0];
-const ACCENT_2 = [0xff, 0xc9, 0x4d];
+/** Picked from Logo.png — the green of the O and the heart in the wordmark. */
+const BRAND = [0x90, 0xfc, 0x00];
 
 const crcTable = Array.from({ length: 256 }, (_, n) => {
   let c = n;
@@ -61,52 +65,51 @@ const png = (size, pixel) => {
   ]);
 };
 
-// Antialiased coverage of a value against a threshold, ~1px feather.
-const smooth = (edge, value) => Math.min(1, Math.max(0, (edge - value) / 1.2 + 0.5));
 const mix = (a, b, t) => a.map((c, i) => Math.round(c + (b[i] - c) * t));
+const clamp01 = (value) => Math.min(1, Math.max(0, value));
+
+/** Inside-ness of the heart curve at unit coordinates, >0 means inside. */
+const heartField = (x, y) => {
+  const t = x * x + y * y - 1;
+  return -(t * t * t - x * x * y * y * y);
+};
 
 /**
  * @param size    icon edge in px
  * @param padding fraction of the edge kept clear of art (maskable needs ~20%)
  */
-const draw = (size, padding) => (x, y) => {
+const draw = (size, padding) => {
   const cx = size / 2 - 0.5;
   const cy = size / 2 - 0.5;
   const safe = size * (1 - padding * 2);
+  // The curve spans roughly ±1.2 horizontally; the extra factor centres it.
+  const scale = safe / 2.5;
+  const samples = 2; // supersampled edges — a heart is all diagonals
 
-  const dx = x - cx;
-  const dy = y - cy;
-  const dist = Math.hypot(dx, dy);
+  return (px, py) => {
+    let coverage = 0;
+    for (let sx = 0; sx < samples; sx++) {
+      for (let sy = 0; sy < samples; sy++) {
+        const x = (px + (sx + 0.5) / samples - cx) / scale;
+        // Shift down slightly: the lobes are visually heavier than the point.
+        const y = -(py + (sy + 0.5) / samples - cy - size * 0.03) / scale;
+        if (heartField(x, y) >= 0) coverage += 1;
+      }
+    }
+    coverage = clamp01(coverage / (samples * samples));
 
-  let color = BG;
-  let alpha = 255;
+    let alpha = 255;
+    if (padding < 0.15) {
+      const r = size * 0.22;
+      const qx = Math.abs(px - cx) - (size / 2 - r);
+      const qy = Math.abs(py - cy) - (size / 2 - r);
+      const corner = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r + 0.5;
+      alpha = Math.round(255 * clamp01(-corner / 1.2 + 0.5));
+      if (alpha === 0) return [0, 0, 0, 0];
+    }
 
-  // Rounded-square backdrop (full bleed on maskable, rounded on the plain icon).
-  if (padding < 0.15) {
-    const r = size * 0.22;
-    const qx = Math.abs(dx) - (size / 2 - r);
-    const qy = Math.abs(dy) - (size / 2 - r);
-    const corner = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r + 0.5;
-    alpha = Math.round(255 * smooth(0, corner));
-    if (alpha === 0) return [0, 0, 0, 0];
-  }
-
-  // Ring.
-  const ringR = safe * 0.34;
-  const ringW = safe * 0.11;
-  const ring = Math.abs(dist - ringR) - ringW / 2;
-  const ringCoverage = smooth(0, ring);
-
-  // The ring fades from accent to the gold highlight across its sweep.
-  const sweep = (Math.atan2(dy, dx) + Math.PI) / (2 * Math.PI);
-  const ringColor = mix(ACCENT, ACCENT_2, sweep * 0.55);
-  color = mix(color, ringColor, ringCoverage);
-
-  // Centre dot.
-  const dotCoverage = smooth(0, dist - safe * 0.11);
-  color = mix(color, ACCENT, dotCoverage);
-
-  return [...color, alpha];
+    return [...mix(BG, BRAND, coverage), alpha];
+  };
 };
 
 mkdirSync(OUT, { recursive: true });
@@ -114,7 +117,7 @@ const targets = [
   ["icon-192.png", 192, 0.1],
   ["icon-512.png", 512, 0.1],
   ["icon-maskable.png", 512, 0.2],
-  ["favicon-32.png", 32, 0.05],
+  ["favicon-32.png", 32, 0.06],
 ];
 
 for (const [name, size, padding] of targets) {

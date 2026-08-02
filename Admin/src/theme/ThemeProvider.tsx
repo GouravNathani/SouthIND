@@ -37,7 +37,7 @@ const readSkin = (): Skin => {
   } catch {
     /* private mode / storage disabled — fall through to the default */
   }
-  return "ledger";
+  return "midnight";
 };
 
 const readMode = (): Mode => {
