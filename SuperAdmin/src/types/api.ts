@@ -157,6 +157,9 @@ export type UserRecord = {
   agent_status?: "active" | "suspended" | null;
   referral_code?: string | null;
   mpin?: string | number | null;
+  mpin_locked?: boolean;
+  mpin_failed_attempts?: number;
+  mpin_locked_at?: string | null;
   branch_id?: number | null;
   deposit_approved_total?: number | null;
   withdrawal_approved_total?: number | null;
@@ -185,6 +188,7 @@ export type DepositRecord = {
   ifsc_code?: string | null;
   upi_id?: string | null;
   receipt_image_path?: string | null;
+  receipt_image_url?: string | null;
   bonus?: {
     id: number;
     code: string;
@@ -209,6 +213,7 @@ export type DepositRecord = {
     phone?: string | null;
     status?: string | null;
     unique_number?: string | null;
+    branch?: { id?: number; name?: string | null; code?: string | null } | null;
   } | null;
 };
 
@@ -241,6 +246,7 @@ export type WithdrawRecord = {
     phone?: string | null;
     status?: string | null;
     unique_number?: string | null;
+    branch?: { id?: number; name?: string | null; code?: string | null } | null;
   } | null;
   play_id?: string | null;
 };
