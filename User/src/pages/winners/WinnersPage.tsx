@@ -110,12 +110,12 @@ function WinnerList({
                   className="tabular text-sm font-semibold"
                   style={{ color: tone === "pos" ? "var(--pos)" : "var(--neg)" }}
                 >
-                  ₹{entry.amount}
+                  {entry.amount}
                 </p>
               ) : null}
-              {entry.reward_label ?? entry.reward ? (
+              {entry.reward || entry.reward_label ? (
                 <p className="truncate text-xs text-accent-2">
-                  {entry.reward_label ?? entry.reward}
+                  {[entry.reward, entry.reward_label].filter(Boolean).join(" · ")}
                 </p>
               ) : null}
             </div>

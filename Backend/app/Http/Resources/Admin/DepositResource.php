@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Admin;
 
 use App\Models\Deposit;
+use App\Support\PublicStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,9 +15,8 @@ class DepositResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $receiptPath = $this->receipt_image_path;
-        $receiptUrl = null;
-        $normalizedReceiptPath = $receiptPath;
+        $normalizedReceiptPath = PublicStorage::path($this->receipt_image_path);
+        $receiptUrl = PublicStorage::url($this->receipt_image_path);
         $completedAt = $this->approved_at;
         if (!$completedAt && in_array($this->status, [Deposit::STATUS_APPROVED, Deposit::STATUS_REJECTED, Deposit::STATUS_FAILED], true)) {
             $completedAt = $this->updated_at;
@@ -25,26 +25,6 @@ class DepositResource extends JsonResource
 
         if ($this->created_at && $completedAt) {
             $processingSeconds = abs($completedAt->diffInSeconds($this->created_at, false));
-        }
-
-        if (is_string($receiptPath) && $receiptPath !== '') {
-            if (preg_match('#^https?://#i', $receiptPath)) {
-                $receiptUrl = $receiptPath;
-            } else {
-                $path = parse_url($receiptPath, PHP_URL_PATH) ?: $receiptPath;
-                $normalizedPath = ltrim((string) $path, '/');
-                if (str_starts_with($normalizedPath, 'storage/')) {
-                    $normalizedPath = 'storage/app/public/' . substr($normalizedPath, strlen('storage/'));
-                }
-                if (str_starts_with($normalizedPath, 'storage/app/public/app/public/')) {
-                    $normalizedPath = 'storage/app/public/' . substr(
-                        $normalizedPath,
-                        strlen('storage/app/public/app/public/')
-                    );
-                }
-                $normalizedReceiptPath = $normalizedPath;
-                $receiptUrl = url($normalizedPath);
-            }
         }
 
         return [

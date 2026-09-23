@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import AdminShell from "@/components/AdminShell";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -104,9 +105,17 @@ export default function WinnerStreakPage() {
             </Button>
           </span>
         ) : (
-          <Button size="sm" variant="secondary" onClick={() => setConfirmingReset(true)}>
-            Close cycle
-          </Button>
+          <span className="flex items-center gap-2">
+            <Link
+              to="/winner-streak/history"
+              className="inline-flex h-9 shrink-0 items-center rounded-md border border-border px-3 text-[13px] font-semibold text-muted"
+            >
+              History
+            </Link>
+            <Button size="sm" variant="secondary" onClick={() => setConfirmingReset(true)}>
+              Close cycle
+            </Button>
+          </span>
         )
       }
     >

@@ -122,6 +122,66 @@ input[type="number"] {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/*
+ * Winner ribbon marquee.
+ *
+ * The track holds two identical groups; translating it by exactly one group
+ * plus one gap puts the second group where the first started, so the loop is
+ * seamless rather than snapping back. Duration comes from the component as
+ * --marquee-duration, scaled to the number of winners, which keeps the pixel
+ * speed constant however many there are.
+ *
+ * The app-wide prefers-reduced-motion rule below already stops this; it settles
+ * on the second group, which is the same content, so nothing is lost.
+ */
+.marquee {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 20px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 20px), transparent);
+}
+
+.marquee__track {
+  display: flex;
+  width: max-content;
+  gap: 1.5rem;
+}
+
+.marquee__track--animated {
+  animation: marquee-scroll var(--marquee-duration, 60s) linear infinite;
+}
+
+/*
+ * Let a reader stop the ribbon to finish reading a name — but only where a real
+ * pointer can hover. On touch, :hover sticks after a tap and would freeze the
+ * marquee for good. Keyboard focus pauses it on any device.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .marquee:hover .marquee__track--animated {
+    animation-play-state: paused;
+  }
+}
+
+.marquee:focus-within .marquee__track--animated {
+  animation-play-state: paused;
+}
+
+.marquee__group {
+  display: flex;
+  gap: 1.5rem;
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    /* One group + one gap. -50% alone lands half a gap short. */
+    transform: translateX(calc(-50% - 0.75rem));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

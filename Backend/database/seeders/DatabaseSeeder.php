@@ -72,6 +72,10 @@ class DatabaseSeeder extends Seeder
             ['Divya N', '+919100000002'],
         ]);
 
+        // Settled play + closed Winner Streak cycles. Split out because it has
+        // to run after every branch has its players and payout account.
+        $this->call(WinnerStreakSeeder::class);
+
         $this->command?->info('Seeded 2 branches. Admin/staff password: '.self::PASSWORD.' · user MPIN: '.self::MPIN);
     }
 

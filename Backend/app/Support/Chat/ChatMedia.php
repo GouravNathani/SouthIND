@@ -2,6 +2,7 @@
 
 namespace App\Support\Chat;
 
+use App\Support\PublicStorage;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -30,7 +31,7 @@ class ChatMedia
         $relativePath = 'chat-attachments/' . Str::random(40) . '.' . $extension;
         Storage::disk('public')->put($relativePath, $binary);
 
-        return Storage::url($relativePath);
+        return PublicStorage::url($relativePath);
     }
 
     /**
@@ -63,44 +64,17 @@ class ChatMedia
         $relativePath = 'chat-voice/' . Str::random(40) . '.' . $extension;
         Storage::disk('public')->put($relativePath, $binary);
 
-        return Storage::url($relativePath);
+        return PublicStorage::url($relativePath);
     }
 
     /**
-     * Turn a stored chat-attachment path into a browser-reachable URL, using the
-     * exact same scheme as deposit receipts (the one proven to serve in
-     * production). Storage::url() yields a bare "/storage/<file>" path, but this
-     * project's hosting serves uploads from "/storage/app/public/<file>" — so a
-     * plain "/storage/..." URL 404s (broken image). We rebuild an absolute URL
-     * with the app/public segment; already-absolute URLs are passed through.
+     * Turn a stored chat-attachment path into a browser-reachable URL. The
+     * prefix uploads are served under is a deployment detail, so it comes from
+     * the public disk's configured `url` (see FILESYSTEM_PUBLIC_URL) rather than
+     * being hardcoded here; already-absolute URLs are passed through.
      */
     public static function publicUrl(?string $path): ?string
     {
-        if (!is_string($path) || $path === '') {
-            return null;
-        }
-
-        if (preg_match('#^https?://#i', $path)) {
-            return $path;
-        }
-
-        $onlyPath = parse_url($path, PHP_URL_PATH) ?: $path;
-        $normalized = ltrim((string) $onlyPath, '/');
-
-        if (str_starts_with($normalized, 'storage/app/public/')) {
-            // already in the public form — leave as-is
-        } elseif (str_starts_with($normalized, 'storage/')) {
-            $normalized = 'storage/app/public/' . substr($normalized, strlen('storage/'));
-        }
-
-        // Guard against an accidental double prefix.
-        if (str_starts_with($normalized, 'storage/app/public/app/public/')) {
-            $normalized = 'storage/app/public/' . substr(
-                $normalized,
-                strlen('storage/app/public/app/public/')
-            );
-        }
-
-        return url($normalized);
+        return PublicStorage::url($path);
     }
 }

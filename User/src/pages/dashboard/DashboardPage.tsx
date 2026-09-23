@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import AppShell from "@/components/AppShell";
@@ -6,34 +6,17 @@ import BannerCarousel from "@/components/BannerCarousel";
 import WinnerRibbon from "@/components/WinnerRibbon";
 import PushSubscriptionManager from "@/components/PushSubscriptionManager";
 import PushPromptCard from "@/components/PushPromptCard";
-import TransactionRow, { type LedgerEntry } from "@/components/TransactionRow";
 import Card, { CardTitle } from "@/components/ui/Card";
-import Button from "@/components/ui/Button";
-import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { IconChat, IconDeposit, IconTrophy, IconWithdraw } from "@/components/icons";
-import {
-  useGetAppSettingsQuery,
-  useGetDepositsQuery,
-  useGetReferralAccountQuery,
-  useGetWithdrawalsQuery,
-} from "@/services/api";
-import { getApiErrorMessage } from "@/utils/apiError";
+import { useGetAppSettingsQuery, useGetReferralAccountQuery } from "@/services/api";
 import { coerceToString, deriveWhatsAppLink } from "@/utils/appSettings";
-import { mergeHistoryRecords } from "@/utils/history";
 import { getStoredUser } from "@/utils/auth";
 import { money } from "@/utils/format";
-
-const RECENT_LIMIT = 6;
-
-const sortByCreatedAtDesc = (a: LedgerEntry, b: LedgerEntry) =>
-  Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? "");
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const depositsQuery = useGetDepositsQuery();
-  const withdrawalsQuery = useGetWithdrawalsQuery();
   const { data: appSettings } = useGetAppSettingsQuery();
   // Only an agent gets the Account tile; the endpoint answers is_agent:false
   // for everyone else, so no extra gate is needed.
@@ -45,25 +28,6 @@ export default function DashboardPage() {
     (typeof storedUser?.play_id === "string" && storedUser.play_id) ||
     "";
 
-  const recent = useMemo<LedgerEntry[]>(() => {
-    const deposits = mergeHistoryRecords(depositsQuery.data).map<LedgerEntry>((record) => ({
-      ...record,
-      kind: "deposit",
-    }));
-    const withdrawals = mergeHistoryRecords(withdrawalsQuery.data).map<LedgerEntry>((record) => ({
-      ...record,
-      kind: "withdrawal",
-    }));
-    return [...deposits, ...withdrawals].sort(sortByCreatedAtDesc).slice(0, RECENT_LIMIT);
-  }, [depositsQuery.data, withdrawalsQuery.data]);
-
-  const summaryError = depositsQuery.error
-    ? getApiErrorMessage(depositsQuery.error, t("dashboard.depositsUnavailable"))
-    : withdrawalsQuery.error
-      ? getApiErrorMessage(withdrawalsQuery.error, t("dashboard.withdrawalsUnavailable"))
-      : null;
-
-  const loading = depositsQuery.isLoading || withdrawalsQuery.isLoading;
   const whatsappLink = deriveWhatsAppLink(appSettings ?? null);
   const depositOffer = coerceToString(appSettings?.deposit_offer_text);
   const withdrawalOffer = coerceToString(appSettings?.withdrawal_offer_text);
@@ -79,8 +43,6 @@ export default function DashboardPage() {
         <PushPromptCard />
         <WinnerRibbon />
         <BannerCarousel href={whatsappLink ?? undefined} />
-
-        {summaryError ? <ErrorNote>{summaryError}</ErrorNote> : null}
 
         <div className="grid gap-3 sm:grid-cols-2">
           <ActionTile
@@ -122,44 +84,6 @@ export default function DashboardPage() {
             </div>
           </Card>
         ) : null}
-
-        <Card>
-          <CardTitle
-            hint={
-              recent.length ? (
-                <Link to="/history" className="text-accent">
-                  {t("common.viewAll")}
-                </Link>
-              ) : undefined
-            }
-          >
-            {t("dashboard.recent")}
-          </CardTitle>
-
-          {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }, (_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : recent.length ? (
-            <ul className="min-w-0">
-              {recent.map((entry) => (
-                <TransactionRow key={`${entry.kind}-${entry.id}`} entry={entry} />
-              ))}
-            </ul>
-          ) : (
-            <EmptyState
-              title={t("dashboard.noActivity")}
-              body={t("dashboard.noActivityBody")}
-              action={
-                <Button size="sm" onClick={() => navigate("/deposit")}>
-                  {t("dashboard.deposit")}
-                </Button>
-              }
-            />
-          )}
-        </Card>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <QuickLink to="/winners" icon={<IconTrophy size={18} />} label={t("winner.title")} />

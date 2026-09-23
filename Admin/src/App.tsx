@@ -14,6 +14,7 @@ import SettingPage from "@/pages/setting/SettingPage";
 import BannerPage from "@/pages/banner/BannerPage";
 import BonusCodePage from "@/pages/bonus/BonusCodePage";
 import WinnerStreakPage from "@/pages/winner/WinnerStreakPage";
+import WinnerStreakHistoryPage from "@/pages/winner/WinnerStreakHistoryPage";
 import SupportPage from "@/pages/support/SupportPage";
 import WhatsAppInboxPage from "@/pages/whatsapp/WhatsAppInboxPage";
 import ReferralPage from "@/pages/referral/ReferralPage";
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/banner" element={<BannerPage />} />
         <Route path="/bonus" element={<BonusCodePage />} />
         <Route path="/winner-streak" element={<WinnerStreakPage />} />
+        <Route path="/winner-streak/history" element={<WinnerStreakHistoryPage />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/whatsapp" element={<WhatsAppInboxPage />} />
         <Route path="/referral" element={<ReferralPage />} />

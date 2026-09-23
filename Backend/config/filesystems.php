@@ -41,7 +41,11 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Defaults to the public/storage symlink. Hosting that points the domain
+            // at the project root instead serves these from /storage/app/public —
+            // set FILESYSTEM_PUBLIC_URL to that full prefix there.
+            // `?:` not a default arg — a blank FILESYSTEM_PUBLIC_URL= in .env is '', not null.
+            'url' => env('FILESYSTEM_PUBLIC_URL') ?: rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

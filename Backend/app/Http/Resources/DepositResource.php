@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\PublicStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Resources\AccountResource;
@@ -15,29 +16,8 @@ class DepositResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $receiptPath = $this->receipt_image_path;
-        $receiptUrl = null;
-        $normalizedReceiptPath = $receiptPath;
-
-        if (is_string($receiptPath) && $receiptPath !== '') {
-            if (preg_match('#^https?://#i', $receiptPath)) {
-                $receiptUrl = $receiptPath;
-            } else {
-                $path = parse_url($receiptPath, PHP_URL_PATH) ?: $receiptPath;
-                $normalizedPath = ltrim((string) $path, '/');
-                if (str_starts_with($normalizedPath, 'storage/')) {
-                    $normalizedPath = 'storage/app/public/' . substr($normalizedPath, strlen('storage/'));
-                }
-                if (str_starts_with($normalizedPath, 'storage/app/public/app/public/')) {
-                    $normalizedPath = 'storage/app/public/' . substr(
-                        $normalizedPath,
-                        strlen('storage/app/public/app/public/')
-                    );
-                }
-                $normalizedReceiptPath = $normalizedPath;
-                $receiptUrl = url($normalizedPath);
-            }
-        }
+        $normalizedReceiptPath = PublicStorage::path($this->receipt_image_path);
+        $receiptUrl = PublicStorage::url($this->receipt_image_path);
 
         return [
             'id' => $this->id,
