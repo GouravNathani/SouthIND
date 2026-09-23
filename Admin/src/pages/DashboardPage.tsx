@@ -157,18 +157,23 @@ function SummaryCard({
 }) {
   if (loading) return <Skeleton className="h-40 w-full" />;
 
+  // Headline is the approved amount; pending = requests not yet approved or rejected.
+  const pendingTotal = Math.max(
+    (summary?.total ?? 0) - (summary?.approvedTotal ?? 0) - (summary?.rejectedTotal ?? 0),
+    0,
+  );
+  const pendingCount = Math.max(
+    (summary?.count ?? 0) - (summary?.approvedCount ?? 0) - (summary?.rejectedCount ?? 0),
+    0,
+  );
+
   return (
     <Card>
       <CardTitle hint={`${summary?.count ?? 0} requests`}>{title}</CardTitle>
-      <p className="tabular text-3xl font-semibold text-accent">{money(summary?.total)}</p>
+      <p className="tabular text-3xl font-semibold text-accent">{money(summary?.approvedTotal)}</p>
 
       <div className="mt-4 grid grid-cols-2 gap-4">
-        <Stat
-          label="Approved"
-          value={money(summary?.approvedTotal)}
-          hint={`${summary?.approvedCount ?? 0}`}
-          tone="pos"
-        />
+        <Stat label="Pending" value={money(pendingTotal)} hint={`${pendingCount}`} />
         <Stat
           label="Rejected"
           value={money(summary?.rejectedTotal)}
@@ -193,7 +198,7 @@ function Stat({
   label: string;
   value: string;
   hint: string;
-  tone: "pos" | "neg";
+  tone?: "pos" | "neg";
 }) {
   return (
     <div className="min-w-0">
@@ -202,7 +207,7 @@ function Stat({
       </p>
       <p
         className="tabular truncate text-lg font-semibold"
-        style={{ color: tone === "pos" ? "var(--pos)" : "var(--neg)" }}
+        style={{ color: tone ? (tone === "pos" ? "var(--pos)" : "var(--neg)") : undefined }}
       >
         {value}
       </p>
