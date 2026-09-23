@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateDepositStatusRequest;
 use App\Http\Resources\Admin\DepositResource;
 use App\Models\Deposit;
+use App\Support\StatusTransition;
 use App\Support\AccountLimitEnforcer;
 use App\Support\Bonus\BonusCodeEnforcer;
 use App\Support\Cache\DepositCache;
@@ -15,12 +16,16 @@ use App\Support\Referral\CommissionAccrual;
 use App\Support\ResolvesBranch;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class DepositController extends Controller
 {
     use ResolvesBranch;
+
+    /** Rows returned when the list is requested without pagination. */
+    private const RECENT_LIMIT = 100;
 
     public function index(Request $request)
     {
@@ -100,42 +105,48 @@ class DepositController extends Controller
             'end_date' => $endDate,
         ], fn ($value) => $value !== null && $value !== '');
 
-        $summaryRow = (clone $query)
-            ->toBase()
-            ->selectRaw('COALESCE(SUM(amount), 0) as total')
-            ->selectRaw(
-                'COALESCE(SUM(CASE WHEN status = ? THEN amount ELSE 0 END), 0) as approved_total',
-                [Deposit::STATUS_APPROVED],
-            )
-            ->selectRaw(
-                'COALESCE(SUM(CASE WHEN status IN (?, ?) THEN amount ELSE 0 END), 0) as rejected_total',
-                [Deposit::STATUS_REJECTED, Deposit::STATUS_FAILED],
-            )
-            ->selectRaw(
-                'COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as approved_count',
-                [Deposit::STATUS_APPROVED],
-            )
-            ->selectRaw(
-                'COALESCE(SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END), 0) as rejected_count',
-                [Deposit::STATUS_REJECTED, Deposit::STATUS_FAILED],
-            )
-            ->selectRaw('COUNT(*) as count')
-            ->first();
-        $avgProcessingRow = (clone $query)
-            ->where('status', Deposit::STATUS_APPROVED)
-            ->whereNotNull('approved_at')
-            ->toBase()
-            ->selectRaw(DurationAggregate::avgSecondsExpression('created_at', 'approved_at') . ' as avg_processing_seconds')
-            ->first();
-        $summary = [
-            'total' => (float) ($summaryRow->total ?? 0),
-            'approvedTotal' => (float) ($summaryRow->approved_total ?? 0),
-            'rejectedTotal' => (float) ($summaryRow->rejected_total ?? 0),
-            'approvedCount' => (int) ($summaryRow->approved_count ?? 0),
-            'rejectedCount' => (int) ($summaryRow->rejected_count ?? 0),
-            'count' => (int) ($summaryRow->count ?? 0),
-            'avgProcessingSeconds' => (float) ($avgProcessingRow->avg_processing_seconds ?? 0),
-        ];
+        // The summary is a full aggregate over the branch's deposits and the list is
+        // polled every ~30s by every open admin tab. Cache it briefly, keyed by the
+        // active filters, so concurrent polls share one aggregate.
+        $summary = Cache::remember('admin:deposits:summary:' . md5(json_encode($filters)), 30, function () use ($query) {
+            $summaryRow = (clone $query)
+                ->toBase()
+                ->selectRaw('COALESCE(SUM(amount), 0) as total')
+                ->selectRaw(
+                    'COALESCE(SUM(CASE WHEN status = ? THEN amount ELSE 0 END), 0) as approved_total',
+                    [Deposit::STATUS_APPROVED],
+                )
+                ->selectRaw(
+                    'COALESCE(SUM(CASE WHEN status IN (?, ?) THEN amount ELSE 0 END), 0) as rejected_total',
+                    [Deposit::STATUS_REJECTED, Deposit::STATUS_FAILED],
+                )
+                ->selectRaw(
+                    'COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as approved_count',
+                    [Deposit::STATUS_APPROVED],
+                )
+                ->selectRaw(
+                    'COALESCE(SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END), 0) as rejected_count',
+                    [Deposit::STATUS_REJECTED, Deposit::STATUS_FAILED],
+                )
+                ->selectRaw('COUNT(*) as count')
+                ->first();
+            $avgProcessingRow = (clone $query)
+                ->where('status', Deposit::STATUS_APPROVED)
+                ->whereNotNull('approved_at')
+                ->toBase()
+                ->selectRaw(DurationAggregate::avgSecondsExpression('created_at', 'approved_at') . ' as avg_processing_seconds')
+                ->first();
+
+            return [
+                'total' => (float) ($summaryRow->total ?? 0),
+                'approvedTotal' => (float) ($summaryRow->approved_total ?? 0),
+                'rejectedTotal' => (float) ($summaryRow->rejected_total ?? 0),
+                'approvedCount' => (int) ($summaryRow->approved_count ?? 0),
+                'rejectedCount' => (int) ($summaryRow->rejected_count ?? 0),
+                'count' => (int) ($summaryRow->count ?? 0),
+                'avgProcessingSeconds' => (float) ($avgProcessingRow->avg_processing_seconds ?? 0),
+            ];
+        });
 
         if ($request->has('page') || $request->has('per_page') || $search !== '' || $startDate !== '' || $endDate !== '') {
             $deposits = $query->latest()->paginate($perPage)->withQueryString();
@@ -144,7 +155,10 @@ class DepositController extends Controller
             ]);
         }
 
-        $deposits = DepositCache::rememberAdmin($filters, fn () => $query->latest()->get());
+        // Un-paginated calls (sidebar badges, notifications, dashboard) only need the
+        // newest rows. Returning the whole branch history here made every poll load,
+        // serialize and cache tens of thousands of rows (44 MB responses in prod).
+        $deposits = $query->latest()->limit(self::RECENT_LIMIT)->get();
 
         return DepositResource::collection($deposits)->additional([
             'summary' => $summary,
@@ -178,7 +192,11 @@ class DepositController extends Controller
             $payload['notes'] = $data['notes'];
         }
 
-        $deposit->update($payload);
+        // Re-check under a row lock: two clicks (or two admins) landing together
+        // both passed the check above, and every side effect below ran twice.
+        if (!StatusTransition::claim($deposit, [Deposit::STATUS_PENDING, Deposit::STATUS_ON_PROCESS], $payload)) {
+            return response()->json(['message' => 'Only pending or in-process deposits can be updated.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         // Unlock (or release) a bonus code applied on the deposit form.
         try {
@@ -197,7 +215,7 @@ class DepositController extends Controller
         // Auto-pause the receiving account once its lifetime approved-deposit
         // total reaches the configured deposit limit.
         if ($data['status'] === Deposit::STATUS_APPROVED) {
-            AccountLimitEnforcer::enforce($deposit->account()->first());
+            AccountLimitEnforcer::enforce($deposit->account()->first(), $deposit);
         }
 
         // Referral commission. An approval pays the referral chain; any other

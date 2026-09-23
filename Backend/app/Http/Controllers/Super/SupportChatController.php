@@ -53,7 +53,9 @@ class SupportChatController extends Controller
             $query->whereHas('user.tags', fn ($q) => $q->where('tags.id', (int) $tagId));
         }
 
-        $conversations = $query->get()->map(fn (SupportConversation $c) => [
+        // Polled every few seconds: cap to the most recently active threads so the
+        // payload stays constant as the user base (and its conversations) grows.
+        $conversations = $query->limit(200)->get()->map(fn (SupportConversation $c) => [
             'id' => $c->id,
             'status' => $c->status,
             'flagged' => (bool) $c->flagged,

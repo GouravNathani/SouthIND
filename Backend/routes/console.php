@@ -9,7 +9,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Artisan::command('wallet:daily-payout {--date= : Bill only this day (YYYY-MM-DD)} {--days=60 : How far back to catch up}', function (): int {
+Artisan::command('wallet:daily-payout {--date= : Bill only this day (YYYY-MM-DD)} {--days=60 : Max days to bill in this run (a longer backlog continues next run)}', function (): int {
     // The ONE place that deducts from the BookFlow wallet.
     //
     // Messages never call the wallet API — they only write wallet_charges rows.
@@ -141,3 +141,242 @@ Artisan::command('referral:rebuild {--branch= : Only this branch}', function ():
 
     return \Illuminate\Console\Command::SUCCESS;
 })->purpose('Recompute commission account balances and team stats from the ledger');
+
+// ── Housekeeping (needs the one-minute `schedule:run` cron) ─────────────────
+
+Artisan::command('logs:prune {--days= : Keep log files for this many days}', function (): int {
+    // Logs are kept for 7 days at most: the daily laravel-*.log files, the
+    // per-day api-*.log activity logs, and any legacy single file (laravel.log,
+    // api.log) that stopped being written to. Judged by the last write time, so
+    // a file that is still in use is never removed.
+    $days = max(1, (int) ($this->option('days') ?: \App\Http\Middleware\LogApiActivity::RETENTION_DAYS));
+    $cutoff = now()->subDays($days)->getTimestamp();
+    $removed = 0;
+    $freed = 0;
+
+    $dirs = [storage_path('logs'), \Illuminate\Support\Facades\Storage::disk('local')->path('logs')];
+
+    foreach ($dirs as $dir) {
+        foreach (glob($dir . '/*.log') ?: [] as $file) {
+            $mtime = @filemtime($file);
+            if ($mtime === false || $mtime >= $cutoff) {
+                continue;
+            }
+
+            $size = (int) @filesize($file);
+            if (@unlink($file)) {
+                $removed++;
+                $freed += $size;
+            }
+        }
+    }
+
+    $this->info("Log prune: removed {$removed} file(s), freed " . round($freed / 1048576, 2) . ' MB.');
+
+    return \Illuminate\Console\Command::SUCCESS;
+})->purpose('Delete log files not written to within the retention window (7 days)');
+
+Schedule::command('logs:prune')
+    ->dailyAt('02:15')
+    ->withoutOverlapping();
+
+Artisan::command('deposits:cleanup-receipts {--days=7 : Keep receipts for this many days}', function (): int {
+    // Deposit receipts are kept for a fixed window only. Older ones are deleted
+    // from disk and their path cleared, so an old deposit simply shows no
+    // receipt. A deposit that is still open (pending / on process) keeps its
+    // receipt whatever its age — an admin still needs it to decide.
+    //
+    // Paths are stored as "/storage/deposit-receipts/<file>" (Storage::url);
+    // nothing outside deposit-receipts/ is ever touched.
+    $days = max((int) $this->option('days'), 1);
+    $cutoff = now()->subDays($days);
+    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    $open = [\App\Models\Deposit::STATUS_PENDING, \App\Models\Deposit::STATUS_ON_PROCESS];
+
+    $relative = function (?string $stored): ?string {
+        $path = ltrim((string) (parse_url(trim((string) $stored), PHP_URL_PATH) ?: ''), '/');
+        foreach (['storage/app/public/', 'storage/'] as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                $path = substr($path, strlen($prefix));
+                break;
+            }
+        }
+
+        return str_starts_with($path, 'deposit-receipts/') && !str_contains($path, '..') ? $path : null;
+    };
+
+    $clearedRows = 0;
+    $removedFiles = 0;
+
+    \App\Models\Deposit::query()
+        ->whereNotNull('receipt_image_path')
+        ->where('receipt_image_path', '!=', '')
+        ->where('created_at', '<', $cutoff)
+        ->whereNotIn('status', $open)
+        ->select(['id', 'receipt_image_path'])
+        ->chunkById(500, function ($deposits) use ($disk, $relative, &$clearedRows, &$removedFiles): void {
+            foreach ($deposits as $deposit) {
+                $path = $relative($deposit->receipt_image_path);
+                if ($path !== null && $disk->exists($path) && $disk->delete($path)) {
+                    $removedFiles++;
+                }
+            }
+
+            // toBase(): clearing an expired receipt is housekeeping, not an edit
+            // of the deposit, so updated_at is left alone.
+            $clearedRows += \App\Models\Deposit::query()
+                ->whereIn('id', $deposits->pluck('id')->all())
+                ->toBase()
+                ->update(['receipt_image_path' => null]);
+        });
+
+    // Files no deposit points at any more (deleted deposits, abandoned uploads)
+    // would otherwise stay forever. Anything an open deposit still uses is kept.
+    $keep = \App\Models\Deposit::query()
+        ->whereIn('status', $open)
+        ->whereNotNull('receipt_image_path')
+        ->pluck('receipt_image_path')
+        ->map($relative)
+        ->filter()
+        ->flip();
+
+    $orphans = 0;
+    $dir = $disk->path('deposit-receipts');
+    if (is_dir($dir)) {
+        $threshold = $cutoff->getTimestamp();
+        foreach (new \FilesystemIterator($dir, \FilesystemIterator::SKIP_DOTS) as $file) {
+            /** @var \SplFileInfo $file */
+            if (!$file->isFile() || $file->getMTime() >= $threshold || isset($keep['deposit-receipts/' . $file->getFilename()])) {
+                continue;
+            }
+
+            if (@unlink($file->getPathname())) {
+                $orphans++;
+            }
+        }
+    }
+
+    $this->info("Receipt cleanup: cleared {$clearedRows} deposit(s), removed {$removedFiles} receipt file(s) and {$orphans} orphaned file(s).");
+    Log::info('Deposit receipt cleanup complete.', [
+        'days' => $days,
+        'deposits_cleared' => $clearedRows,
+        'files_removed' => $removedFiles,
+        'orphans_removed' => $orphans,
+    ]);
+
+    return \Illuminate\Console\Command::SUCCESS;
+})->purpose('Delete deposit receipts older than the retention window (7 days) and clear their paths');
+
+Schedule::command('deposits:cleanup-receipts --days=7')
+    ->dailyAt('01:00')
+    ->withoutOverlapping();
+
+Artisan::command('cache:prune-files', function (): int {
+    // Laravel's file cache driver never garbage-collects: an expired entry is
+    // only unlinked when something reads that exact key again. The admin list
+    // caches are tens of MB each, so the directory grows without bound.
+    //
+    // File layout: the first 10 bytes are the expiry unix timestamp, then the
+    // serialized payload. "9999999999" is Cache::forever and must be kept.
+    $dir = storage_path('framework/cache/data');
+
+    if (!is_dir($dir)) {
+        $this->info('No file cache directory.');
+
+        return \Illuminate\Console\Command::SUCCESS;
+    }
+
+    $now = time();
+    $scanned = 0;
+    $removed = 0;
+    $freed = 0;
+
+    $iterator = new \RecursiveIteratorIterator(
+        new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+        \RecursiveIteratorIterator::CHILD_FIRST,
+    );
+
+    foreach ($iterator as $entry) {
+        /** @var \SplFileInfo $entry */
+        if ($entry->isDir()) {
+            @rmdir($entry->getPathname()); // drops the hash dirs once emptied
+
+            continue;
+        }
+
+        $scanned++;
+        $path = $entry->getPathname();
+
+        $handle = @fopen($path, 'rb');
+        if ($handle === false) {
+            continue;
+        }
+
+        $expiry = fread($handle, 10);
+        fclose($handle);
+
+        // Not a payload we understand, kept forever, or still live.
+        if ($expiry === false || !ctype_digit($expiry) || $expiry === '9999999999' || (int) $expiry > $now) {
+            continue;
+        }
+
+        $size = (int) $entry->getSize();
+        if (@unlink($path)) {
+            $removed++;
+            $freed += $size;
+        }
+    }
+
+    $this->info("Cache prune: scanned {$scanned} file(s), removed {$removed}, freed " . round($freed / 1048576, 2) . ' MB.');
+
+    return \Illuminate\Console\Command::SUCCESS;
+})->purpose('Delete expired Laravel file-cache entries (the file driver never GCs)');
+
+Schedule::command('cache:prune-files')
+    ->dailyAt('02:30')
+    ->withoutOverlapping();
+
+Artisan::command('tokens:cleanup', function (): int {
+    $deleted = \Laravel\Sanctum\PersonalAccessToken::query()
+        ->whereNotNull('expires_at')
+        ->where('expires_at', '<=', now())
+        ->delete();
+
+    $this->info("Token cleanup: removed {$deleted} expired access token(s).");
+
+    return \Illuminate\Console\Command::SUCCESS;
+})->purpose('Delete expired access tokens');
+
+Schedule::command('tokens:cleanup')
+    ->hourly()
+    ->withoutOverlapping();
+
+Artisan::command('tokens:purge-all', function (): int {
+    // Hard reset: remove ALL access tokens (valid ones included) and every
+    // pending password-reset link, forcing users, admins and super admins to log
+    // in again. Anyone online gets a 401 on their next request and is sent back
+    // to the login screen. Unlike tokens:cleanup, which only drops expired ones.
+    $purgedAccessTokens = \Laravel\Sanctum\PersonalAccessToken::query()->delete();
+    $purgedResetTokens = \Illuminate\Support\Facades\DB::table('password_reset_tokens')->delete();
+
+    $this->info("All tokens purged. Access: {$purgedAccessTokens}, password reset: {$purgedResetTokens}.");
+    Log::info('Nightly token purge complete (everyone logged out).', [
+        'access_tokens_purged' => $purgedAccessTokens,
+        'password_reset_tokens_purged' => $purgedResetTokens,
+    ]);
+
+    return \Illuminate\Console\Command::SUCCESS;
+})->purpose('Force-logout everyone by deleting ALL access and password-reset tokens');
+
+// Every night at 00:00 (app timezone) — hard reset, everyone is logged out.
+Schedule::command('tokens:purge-all')
+    ->dailyAt('00:00')
+    ->withoutOverlapping();
+
+// Shared hosting has no always-on worker, so the one-minute scheduler cron
+// drains the queue instead: --stop-when-empty keeps each run short, --max-time
+// guarantees it exits before the next tick, and withoutOverlapping stops runs
+// from stacking up.
+Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
+    ->everyMinute()
+    ->withoutOverlapping();

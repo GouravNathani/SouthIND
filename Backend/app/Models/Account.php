@@ -34,6 +34,8 @@ class Account extends Model
         'deposit_limit' => 'decimal:2',
         'min_deposit' => 'decimal:2',
         'max_deposit' => 'decimal:2',
+        'status_changed_at' => 'datetime',
+        'status_meta' => 'array',
     ];
 
     public function scopeActive($query)
@@ -74,5 +76,16 @@ class Account extends Model
     public function deposits()
     {
         return $this->hasMany(Deposit::class);
+    }
+
+    /** Who made the latest status change (null when the system did it). */
+    public function statusChangedBy()
+    {
+        return $this->belongsTo(Admin::class, 'status_changed_by_id');
+    }
+
+    public function statusEvents()
+    {
+        return $this->hasMany(AccountStatusEvent::class);
     }
 }

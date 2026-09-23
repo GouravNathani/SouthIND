@@ -7,14 +7,23 @@ use App\Models\User;
 use Closure;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
 class LogApiActivity
 {
-    protected static ?bool $adminsLastActiveColumnExists = null;
-    protected static ?bool $usersLastSeenColumnExists = null;
+    /** Requests slower than this are also reported to the Laravel log. */
+    private const SLOW_REQUEST_MS = 3000;
+
+    /** Response bodies above this size are summarised, never decoded. */
+    private const RESPONSE_PREVIEW_BYTES = 4000;
+
+    /** Longer string values (base64 images, voice notes) are replaced by their length. */
+    private const MAX_LOGGED_STRING = 1000;
+
+    /** Daily api-*.log files older than this are pruned by `logs:prune-api`. */
+    public const RETENTION_DAYS = 7;
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -34,6 +43,17 @@ class LogApiActivity
 
         $duration = round((microtime(true) - $start) * 1000, 2);
 
+        // Early warning for the next "one endpoint pegs the CPU" problem: slow
+        // requests show up in the daily laravel log without digging in api logs.
+        if ($duration >= self::SLOW_REQUEST_MS) {
+            Log::warning('Slow API request', [
+                'method' => $request->method(),
+                'path' => $request->path(),
+                'status' => $response->getStatusCode(),
+                'duration_ms' => $duration,
+            ]);
+        }
+
         $entry = [
             'timestamp' => now()->toIsoString(),
             'method' => $request->method(),
@@ -46,11 +66,7 @@ class LogApiActivity
             'response' => $this->sanitizeResponse($response),
         ];
 
-        if (!Storage::exists('logs')) {
-            Storage::makeDirectory('logs');
-        }
-
-        Storage::append('logs/api.log', json_encode($entry));
+        $this->appendToDailyLog(json_encode($entry));
 
         $this->touchAdminActivity($request);
         $this->touchUserActivity($request);
@@ -90,19 +106,63 @@ class LogApiActivity
         return in_array('master-login', (array) ($token->abilities ?? []), true);
     }
 
+    /**
+     * Append one line in O(1). Storage::append() re-reads and rewrites the whole
+     * file on every call, so its cost grew with the log (and concurrent requests
+     * overwrote each other's lines). One file per day keeps retention trivial.
+     */
+    protected function appendToDailyLog(string $line): void
+    {
+        $dir = Storage::disk('local')->path('logs');
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        // Logging must never break the API response it describes.
+        @file_put_contents($dir . '/api-' . now()->format('Y-m-d') . '.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+    }
+
     protected function sanitizePayload(array $payload): array
     {
+        // Anything that works as a credential on its own. The log is plain text on
+        // disk, so a leaked copy must never be enough to sign in as anyone.
         $hiddenKeys = [
             'password',
             'password_confirmation',
-            'token',
             'current_password',
             'new_password',
+            'new_password_confirmation',
+            'master_password',
+            'token',
+            'access_token',
+            'refresh_token',
+            'session_key',
+            'encrypted_session_key',
+            'mpin',
+            'current_mpin',
+            'new_mpin',
+            'new_mpin_confirmation',
+            'mpin_confirmation',
+            'pin',
+            'otp',
+            'code',
+            'secret',
+            'two_factor_secret',
+            'two_factor_code',
+            'recovery_code',
+            'api_key',
+            'api_secret',
+            'access_token_encrypted',
         ];
 
         foreach ($payload as $key => $value) {
             if (in_array($key, $hiddenKeys, true)) {
                 $payload[$key] = '********';
+                continue;
+            }
+
+            if (is_string($value) && strlen($value) > self::MAX_LOGGED_STRING) {
+                $payload[$key] = '[' . strlen($value) . ' chars]';
                 continue;
             }
 
@@ -122,6 +182,15 @@ class LogApiActivity
             return [];
         }
 
+        // Big bodies end up as "truncated" anyway; skip the decode → sanitize →
+        // re-encode round trip that cost hundreds of ms on large list responses.
+        if (strlen($content) > self::RESPONSE_PREVIEW_BYTES) {
+            return [
+                'truncated' => true,
+                'length' => strlen($content),
+            ];
+        }
+
         $decoded = json_decode($content, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -131,10 +200,20 @@ class LogApiActivity
             ];
         }
 
+        // A scalar body is still valid JSON — e.g. the WhatsApp webhook verify
+        // echoes Meta's numeric hub.challenge, which decodes to an int and used
+        // to blow up sanitizePayload()'s array type hint (500 on verification).
+        if (!is_array($decoded)) {
+            return [
+                'length' => strlen($content),
+                'message' => 'scalar-response',
+            ];
+        }
+
         $sanitized = $this->sanitizePayload($decoded);
 
         $preview = json_encode($sanitized);
-        if ($preview !== false && strlen($preview) > 4000) {
+        if ($preview !== false && strlen($preview) > self::RESPONSE_PREVIEW_BYTES) {
             return [
                 'truncated' => true,
                 'length' => strlen($preview),
@@ -175,35 +254,17 @@ class LogApiActivity
             return;
         }
 
-        if (!$this->canUpdateLastActive()) {
-            return;
-        }
-
+        // No Schema::hasColumn() probe here: its "static cache" resets on every
+        // request, so it cost an information_schema query per API call.
         $lastActive = $user->last_active_at;
         $shouldUpdate = !$lastActive || $lastActive->diffInSeconds(now()) >= 30;
         if ($shouldUpdate) {
             try {
                 $user->forceFill(['last_active_at' => now()])->saveQuietly();
             } catch (QueryException) {
-                // Prevent repeated log spam if schema drift exists in current environment.
-                self::$adminsLastActiveColumnExists = false;
+                // Column missing in this environment (schema drift) — activity is best-effort.
             }
         }
-    }
-
-    protected function canUpdateLastActive(): bool
-    {
-        if (self::$adminsLastActiveColumnExists !== null) {
-            return self::$adminsLastActiveColumnExists;
-        }
-
-        try {
-            self::$adminsLastActiveColumnExists = Schema::hasColumn('admins', 'last_active_at');
-        } catch (\Throwable) {
-            self::$adminsLastActiveColumnExists = false;
-        }
-
-        return self::$adminsLastActiveColumnExists;
     }
 
     protected function touchUserActivity(Request $request): void
@@ -213,34 +274,14 @@ class LogApiActivity
             return;
         }
 
-        if (!$this->canUpdateLastSeen()) {
-            return;
-        }
-
         $lastSeen = $user->last_seen_at;
         $shouldUpdate = !$lastSeen || $lastSeen->diffInSeconds(now()) >= 30;
         if ($shouldUpdate) {
             try {
                 $user->forceFill(['last_seen_at' => now()])->saveQuietly();
             } catch (QueryException) {
-                // Prevent repeated log spam if schema drift exists in current environment.
-                self::$usersLastSeenColumnExists = false;
+                // Column missing in this environment (schema drift) — activity is best-effort.
             }
         }
-    }
-
-    protected function canUpdateLastSeen(): bool
-    {
-        if (self::$usersLastSeenColumnExists !== null) {
-            return self::$usersLastSeenColumnExists;
-        }
-
-        try {
-            self::$usersLastSeenColumnExists = Schema::hasColumn('users', 'last_seen_at');
-        } catch (\Throwable) {
-            self::$usersLastSeenColumnExists = false;
-        }
-
-        return self::$usersLastSeenColumnExists;
     }
 }

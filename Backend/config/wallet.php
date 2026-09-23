@@ -35,7 +35,11 @@ return [
 
     // How long (seconds) to cache a balance/rates read, to avoid hammering the
     // API on every payout-page poll. Deducts are never cached.
-    'balance_cache_ttl' => (int) env('WALLET_BALANCE_CACHE_TTL', 30),
+    //
+    // Keep this well ABOVE the panels' 30s wallet-status poll: at TTL == poll
+    // interval every poll found the entry expired and paid a full HTTP round
+    // trip, which is where the Control wallet timeouts in the logs came from.
+    'balance_cache_ttl' => (int) env('WALLET_BALANCE_CACHE_TTL', 120),
 
     // After a failed read, how long (seconds) to serve the fallback without
     // re-calling the API. Without this every read during an outage pays the full

@@ -463,7 +463,7 @@ class WalletService
             $days = [Carbon::parse($date, $tz)->startOfDay()];
         } else {
             $days = [];
-            $cursor = $this->earliestUnbilledDay($today, $maxDays);
+            $cursor = $this->earliestUnbilledDay($today);
             while ($cursor->lt($today)) {
                 $days[] = $cursor->copy();
                 $cursor->addDay();
@@ -473,6 +473,15 @@ class WalletService
         $result = ['days' => 0, 'settled' => 0, 'owed' => 0, 'coins' => 0.0];
 
         foreach ($days as $day) {
+            // Cap the RUN, not the reach. We always start at the true oldest
+            // unbilled day; $maxDays only limits how many days one run actually
+            // bills (one API call each), so a long backlog drains over several
+            // runs instead of its oldest days being skipped forever. Empty days
+            // in between cost a query, not an API call, so they don't count.
+            if ($result['days'] >= $maxDays) {
+                break;
+            }
+
             $payout = $this->buildDayPayout($day);
             if ($payout === null) {
                 continue;
@@ -564,17 +573,19 @@ class WalletService
     // ── Internals ──────────────────────────────────────────────────────────────
 
     /**
-     * The oldest day we still have something to bill for, clamped to $maxDays
-     * so a long-dormant panel can't fan out into hundreds of API calls. Returns
-     * $today (i.e. "nothing to do") when the ledger is clean.
+     * The oldest day we still have something to bill for. Returns $today
+     * (i.e. "nothing to do") when the ledger is clean.
+     *
+     * No floor is applied here: a day older than any window must still be
+     * billed eventually, so the caller caps how many days one RUN processes
+     * rather than how far back it may look.
      *
      * Deliberately avoids SQL date functions — the panels run on MySQL in
      * production and SQLite locally, and the two don't share a date dialect.
      */
-    private function earliestUnbilledDay(CarbonInterface $today, int $maxDays): Carbon
+    private function earliestUnbilledDay(CarbonInterface $today): Carbon
     {
         $tz = config('app.timezone');
-        $floor = $today->copy()->subDays(max(1, $maxDays));
 
         $candidates = [];
 
@@ -600,9 +611,7 @@ class WalletService
             return $today->copy();
         }
 
-        $earliest = min($candidates);
-
-        return $earliest->lt($floor) ? $floor : $earliest->copy();
+        return min($candidates)->copy();
     }
 
     /**

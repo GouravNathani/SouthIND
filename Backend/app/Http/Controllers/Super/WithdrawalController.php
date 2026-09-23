@@ -6,16 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateWithdrawalStatusRequest;
 use App\Http\Resources\Super\WithdrawalResource;
 use App\Models\Withdrawal;
+use App\Support\StatusTransition;
 use App\Support\Cache\WithdrawalCache;
 use App\Support\Push\UserPushNotifier;
 use App\Support\Query\DurationAggregate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class WithdrawalController extends Controller
 {
+    /** Rows returned when the list is requested without pagination. */
+    private const RECENT_LIMIT = 100;
+
     public function index(Request $request)
     {
         $query = Withdrawal::query()->with(['user', 'processor']);
@@ -84,44 +89,59 @@ class WithdrawalController extends Controller
             }
         }
 
-        $summaryRow = (clone $query)
-            ->toBase()
-            ->selectRaw('COALESCE(SUM(amount), 0) as total')
-            ->selectRaw(
-                'COALESCE(SUM(CASE WHEN status = ? THEN amount ELSE 0 END), 0) as approved_total',
-                [Withdrawal::STATUS_APPROVED],
-            )
-            ->selectRaw(
-                'COALESCE(SUM(CASE WHEN status IN (?, ?) THEN amount ELSE 0 END), 0) as rejected_total',
-                [Withdrawal::STATUS_REJECTED, Withdrawal::STATUS_FAILED],
-            )
-            ->selectRaw(
-                'COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as approved_count',
-                [Withdrawal::STATUS_APPROVED],
-            )
-            ->selectRaw(
-                'COALESCE(SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END), 0) as rejected_count',
-                [Withdrawal::STATUS_REJECTED, Withdrawal::STATUS_FAILED],
-            )
-            ->selectRaw('COUNT(*) as count')
-            ->first();
-        $avgProcessingRow = (clone $query)
-            ->where('status', Withdrawal::STATUS_APPROVED)
-            ->whereNotNull('processed_at')
-            ->toBase()
-            ->selectRaw(DurationAggregate::avgSecondsExpression('created_at', 'processed_at') . ' as avg_processing_seconds')
-            ->first();
-        $summary = [
-            'total' => (float) ($summaryRow->total ?? 0),
-            'approvedTotal' => (float) ($summaryRow->approved_total ?? 0),
-            'rejectedTotal' => (float) ($summaryRow->rejected_total ?? 0),
-            'approvedCount' => (int) ($summaryRow->approved_count ?? 0),
-            'rejectedCount' => (int) ($summaryRow->rejected_count ?? 0),
-            'count' => (int) ($summaryRow->count ?? 0),
-            'avgProcessingSeconds' => (float) ($avgProcessingRow->avg_processing_seconds ?? 0),
-        ];
+        // Full aggregate across every branch, polled by each open super-admin tab:
+        // cache it briefly, keyed by the active filters.
+        $summaryKey = 'super:withdrawals:summary:' . md5(json_encode([
+            $branchId, $status, $userId, $playId, $search, $startDate, $endDate,
+        ]));
+        $summary = Cache::remember($summaryKey, 30, function () use ($query) {
+            $summaryRow = (clone $query)
+                ->toBase()
+                ->selectRaw('COALESCE(SUM(amount), 0) as total')
+                ->selectRaw(
+                    'COALESCE(SUM(CASE WHEN status = ? THEN amount ELSE 0 END), 0) as approved_total',
+                    [Withdrawal::STATUS_APPROVED],
+                )
+                ->selectRaw(
+                    'COALESCE(SUM(CASE WHEN status IN (?, ?) THEN amount ELSE 0 END), 0) as rejected_total',
+                    [Withdrawal::STATUS_REJECTED, Withdrawal::STATUS_FAILED],
+                )
+                ->selectRaw(
+                    'COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as approved_count',
+                    [Withdrawal::STATUS_APPROVED],
+                )
+                ->selectRaw(
+                    'COALESCE(SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END), 0) as rejected_count',
+                    [Withdrawal::STATUS_REJECTED, Withdrawal::STATUS_FAILED],
+                )
+                ->selectRaw('COUNT(*) as count')
+                ->first();
+            $avgProcessingRow = (clone $query)
+                ->where('status', Withdrawal::STATUS_APPROVED)
+                ->whereNotNull('processed_at')
+                ->toBase()
+                ->selectRaw(DurationAggregate::avgSecondsExpression('created_at', 'processed_at') . ' as avg_processing_seconds')
+                ->first();
 
-        $withdrawals = $query->latest()->get();
+            return [
+                'total' => (float) ($summaryRow->total ?? 0),
+                'approvedTotal' => (float) ($summaryRow->approved_total ?? 0),
+                'rejectedTotal' => (float) ($summaryRow->rejected_total ?? 0),
+                'approvedCount' => (int) ($summaryRow->approved_count ?? 0),
+                'rejectedCount' => (int) ($summaryRow->rejected_count ?? 0),
+                'count' => (int) ($summaryRow->count ?? 0),
+                'avgProcessingSeconds' => (float) ($avgProcessingRow->avg_processing_seconds ?? 0),
+            ];
+        });
+
+        // The SuperAdmin list page sends page/per_page and reads `meta`, so honour it.
+        // Everything else only needs the newest rows — never the whole table.
+        if ($request->has('page') || $request->has('per_page')) {
+            $perPage = min(max((int) $request->query('per_page', 25), 1), 100);
+            $withdrawals = $query->latest()->paginate($perPage)->withQueryString();
+        } else {
+            $withdrawals = $query->latest()->limit(self::RECENT_LIMIT)->get();
+        }
 
         return WithdrawalResource::collection($withdrawals)->additional([
             'summary' => $summary,
@@ -151,7 +171,11 @@ class WithdrawalController extends Controller
             $payload['notes'] = $data['notes'];
         }
 
-        $withdrawal->update($payload);
+        // Re-check under a row lock: two clicks (or two admins) landing together
+        // both passed the check above, and every side effect below ran twice.
+        if (!StatusTransition::claim($withdrawal, [Withdrawal::STATUS_PENDING, Withdrawal::STATUS_ON_PROCESS], $payload)) {
+            return response()->json(['message' => 'Only pending or in-process withdrawals can be updated.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         try {
             UserPushNotifier::notifyWithdrawalStatus($withdrawal);

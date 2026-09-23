@@ -8,6 +8,8 @@ use App\Http\Resources\Admin\AccountResource;
 use App\Models\Account;
 use App\Models\Admin;
 use App\Models\Deposit;
+use App\Support\AccountLimitEnforcer;
+use App\Support\AccountStatusAudit;
 use App\Support\Cache\AccountCache;
 use App\Support\ResolvesBranch;
 use Illuminate\Http\Request;
@@ -25,6 +27,7 @@ class AccountController extends Controller
 
         $accounts = AccountCache::rememberForBranch($branchId, function () use ($branchId) {
             return Account::query()
+                ->with(['creator:id,name,role', 'statusChangedBy:id,name,role'])
                 ->where('branch_id', $branchId)
                 ->orderBy('name')
                 ->get();
@@ -93,7 +96,7 @@ class AccountController extends Controller
 
         return response()->json([
             'message' => 'Account created',
-            'account' => new AccountResource($account),
+            'account' => new AccountResource($this->withAudit($account)),
         ], Response::HTTP_CREATED);
     }
 
@@ -101,7 +104,7 @@ class AccountController extends Controller
     {
         $this->ensureOwnership($account, $request->user());
 
-        return new AccountResource($account);
+        return new AccountResource($this->withAudit($account));
     }
 
     public function update(AccountRequest $request, Account $account)
@@ -117,11 +120,21 @@ class AccountController extends Controller
 
         unset($data['scanner_image']);
 
+        $fromStatus = $account->status;
+
         $account->update($data);
+
+        if ($account->status !== $fromStatus) {
+            AccountStatusAudit::record($account, $fromStatus, AccountStatusAudit::REASON_MANUAL, $request->user());
+        } elseif (array_key_exists('deposit_limit', $data)) {
+            // Raising the limit, or clearing it (0/empty = unlimited), releases
+            // an account the limit had auto-paused.
+            AccountLimitEnforcer::resumeIfLimitLifted($account, $request->user());
+        }
 
         AccountCache::flushForBranch($this->resolveBranchId($request->user()));
 
-        return new AccountResource($account);
+        return new AccountResource($this->withAudit($account));
     }
 
     public function destroy(Request $request, Account $account): Response
@@ -135,6 +148,15 @@ class AccountController extends Controller
         AccountCache::flushForBranch($branchId);
 
         return response()->noContent();
+    }
+
+    /**
+     * Who added the account and who last changed its status, for the panel's
+     * badges. The list eager-loads the same relations.
+     */
+    private function withAudit(Account $account): Account
+    {
+        return $account->load(['creator:id,name,role', 'statusChangedBy:id,name,role']);
     }
 
     protected function resolveOwnerAdminId(Admin $actor): int

@@ -26,6 +26,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'wallet-hmac' => \App\Http\Middleware\VerifyWalletHmac::class,
         ]);
 
+        // There is no `login` route: this is an API. Laravel's Authenticate middleware
+        // resolves the guest redirect BEFORE the AuthenticationException handler
+        // below runs, so any unauthenticated request without `Accept: application/json`
+        // died with a 500 "Route [login] not defined" instead of a JSON 401.
+        $middleware->redirectGuestsTo(fn () => null);
+
         $middleware->appendToGroup('api', \App\Http\Middleware\LogApiActivity::class);
 
         // Conditional GET. Settings, banners and account lists are polled

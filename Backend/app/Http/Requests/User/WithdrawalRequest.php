@@ -9,6 +9,7 @@ use Illuminate\Validation\Rule;
 class WithdrawalRequest extends FormRequest
 {
     private const DEFAULT_MINIMUM_AMOUNT = 500;
+    private const MAXIMUM_AMOUNT = 9999999999.99;
     private const IFSC_REGEX = '/^[A-Z]{4}0[A-Z0-9]{6}$/';
 
     public function authorize(): bool
@@ -27,7 +28,14 @@ class WithdrawalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => ['required', 'numeric', 'min:' . $this->resolveMinimumAmount()],
+            'amount' => [
+                'bail',
+                'required',
+                'numeric',
+                'decimal:0,2',
+                'min:' . $this->resolveMinimumAmount(),
+                'max:' . self::MAXIMUM_AMOUNT,
+            ],
             'destination_type' => ['required', Rule::in(['upi', 'bank'])],
             'upi_id' => [
                 'nullable',
@@ -56,6 +64,14 @@ class WithdrawalRequest extends FormRequest
             ],
             'play_id' => ['nullable', 'string', 'max:64'],
             'notes' => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'amount.decimal' => 'Amount may contain up to 2 decimal places only.',
+            'amount.max' => 'Amount exceeds the maximum allowed limit.',
         ];
     }
 

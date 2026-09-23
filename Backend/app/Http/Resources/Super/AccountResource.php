@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Super;
 
+use App\Support\AccountStatusAudit;
 use App\Support\PublicStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -29,7 +30,18 @@ class AccountResource extends JsonResource
             'logo_path' => $normalizedLogoPath,
             'logo_url' => $logoUrl,
             'status' => $this->status,
+            // Why/who/when of the latest status change (see AccountStatusAudit).
+            // status_changed_by is null when the system made the change. The
+            // admin summaries only appear when the relation was eager-loaded:
+            // DepositResource embeds this resource per row, and lazy-loading
+            // there would add two queries to every deposit in the list.
+            'status_reason' => $this->status_reason,
+            'status_changed_by' => $this->whenLoaded('statusChangedBy', fn () => AccountStatusAudit::summarize($this->statusChangedBy, $this->status_changed_by_role)),
+            'status_changed_by_role' => $this->status_changed_by_role,
+            'status_changed_at' => $this->status_changed_at,
+            'status_meta' => $this->status_meta,
             'created_at' => $this->created_at,
+            'created_by' => $this->whenLoaded('creator', fn () => AccountStatusAudit::summarize($this->creator)),
             'branch_id' => $this->branch_id,
         ];
     }
