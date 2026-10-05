@@ -8,6 +8,7 @@ use App\Http\Resources\Super\GlobalSettingResource;
 use App\Models\GlobalSetting;
 use App\Support\Cache\AppSettingCache;
 use App\Support\Cache\GlobalSettingCache;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 class GlobalSettingController extends Controller
@@ -25,15 +26,21 @@ class GlobalSettingController extends Controller
 
     public function update(GlobalSettingRequest $request)
     {
+        $payload = $request->validated();
+        // Until the column exists (it may be added by hand), ignore the switch instead of failing.
+        if (!Schema::hasColumn('global_settings', 'support_chat_enabled')) {
+            unset($payload['support_chat_enabled']);
+        }
+
         $setting = GlobalSetting::query()->latest('id')->first();
 
         if (!$setting) {
             $setting = GlobalSetting::create([
-                ...$request->validated(),
+                ...$payload,
                 'created_by' => $request->user()->id,
             ]);
         } else {
-            $setting->update($request->validated());
+            $setting->update($payload);
         }
 
         GlobalSettingCache::flush();

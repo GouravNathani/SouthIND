@@ -53,3 +53,15 @@ export const isUnauthorizedError = (error: unknown): boolean => {
   const typed = error as FetchBaseQueryError;
   return typed.status === 401;
 };
+
+/** The API refused a support chat call because the super admin switched chat off. */
+export const isSupportChatOffError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const typed = error as FetchBaseQueryError;
+  return (
+    typed.status === 403 &&
+    (typed.data as { code?: string } | undefined)?.code === "support_chat_disabled"
+  );
+};

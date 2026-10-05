@@ -16,6 +16,7 @@ class GlobalSetting extends Model
         'mask_user_phone',
         'user_panel_maintenance_enabled',
         'bonus_deposit_enabled',
+        'support_chat_enabled',
         'created_by',
     ];
 
@@ -23,6 +24,7 @@ class GlobalSetting extends Model
         'mask_user_phone' => 'boolean',
         'user_panel_maintenance_enabled' => 'boolean',
         'bonus_deposit_enabled' => 'boolean',
+        'support_chat_enabled' => 'boolean',
     ];
 
     public function creator()

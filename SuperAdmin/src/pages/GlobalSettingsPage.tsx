@@ -17,6 +17,7 @@ type FormState = {
   mask_user_phone: boolean;
   user_panel_maintenance_enabled: boolean;
   bonus_deposit_enabled: boolean;
+  support_chat_enabled: boolean;
 };
 
 const toForm = (settings?: GlobalSettings | null): FormState => ({
@@ -26,6 +27,8 @@ const toForm = (settings?: GlobalSettings | null): FormState => ({
   mask_user_phone: Boolean(settings?.mask_user_phone),
   user_panel_maintenance_enabled: Boolean(settings?.user_panel_maintenance_enabled),
   bonus_deposit_enabled: Boolean(settings?.bonus_deposit_enabled),
+  // Chat is on unless explicitly switched off (no settings row yet = on).
+  support_chat_enabled: settings?.support_chat_enabled !== false,
 });
 
 export default function GlobalSettingsPage() {
@@ -130,6 +133,22 @@ export default function GlobalSettingsPage() {
                 <span className="block text-sm font-medium text-text">Bonus codes on deposits</span>
                 <span className="block text-xs text-muted">
                   The network-wide switch. A branch can still turn its own off.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex min-w-0 items-start gap-3">
+              <input
+                type="checkbox"
+                checked={form.support_chat_enabled}
+                onChange={(event) => patch({ support_chat_enabled: event.target.checked })}
+                className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]"
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-text">Support chat</span>
+                <span className="block text-xs text-muted">
+                  Off: users cannot open it, branch admins do not see it and no panel polls it.
+                  Old chats are kept.
                 </span>
               </span>
             </label>

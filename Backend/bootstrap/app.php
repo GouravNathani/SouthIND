@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'prevent-staff' => \App\Http\Middleware\PreventStaffAccess::class,
             'staff' => \App\Http\Middleware\EnsureStaff::class,
             'user-panel-open' => \App\Http\Middleware\EnsureUserPanelAvailable::class,
+            'support-chat-on' => \App\Http\Middleware\EnsureSupportChatEnabled::class,
             // HMAC gate for server-to-server calls from BookFlowControl.
             'wallet-hmac' => \App\Http\Middleware\VerifyWalletHmac::class,
         ]);

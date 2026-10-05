@@ -44,7 +44,12 @@ export default function PayoutPage() {
       key: "payout",
       header: "Payout",
       align: "right",
-      render: (row) => <span className="tabular font-semibold text-accent">{money(row.payout)}</span>,
+      render: (row) => (
+        <span className="tabular font-semibold text-accent">
+          {money(row.payout)}
+          {row.deduction?.status === "settled" ? " · paid" : row.deduction?.status === "owed" ? " · owed" : ""}
+        </span>
+      ),
     },
   ];
 

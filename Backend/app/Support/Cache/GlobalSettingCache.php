@@ -20,6 +20,15 @@ class GlobalSettingCache
         return $value;
     }
 
+    /**
+     * Support chat is ON unless the super admin switched it off. A missing row
+     * or column (migration not run yet) counts as ON.
+     */
+    public static function supportChatEnabled(): bool
+    {
+        return (bool) (self::current()?->support_chat_enabled ?? true);
+    }
+
     public static function flush(): void
     {
         Cache::forget(self::KEY);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\AdminLoginRequest;
 use App\Http\Resources\Admin\AdminResource;
 use App\Models\Admin;
+use App\Support\Cache\GlobalSettingCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Symfony\Component\HttpFoundation\Response;
@@ -76,6 +77,9 @@ class AdminAuthController extends Controller
 
     public function me(Request $request)
     {
-        return new AdminResource($request->user()->load('branch'));
+        // `features` rides on the /me poll the panels already make, so a super
+        // admin switching support chat off reaches every open panel within a poll.
+        return (new AdminResource($request->user()->load('branch')))
+            ->additional(['features' => ['support_chat' => GlobalSettingCache::supportChatEnabled()]]);
     }
 }

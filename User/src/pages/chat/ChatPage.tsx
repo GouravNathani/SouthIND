@@ -5,11 +5,12 @@ import Button from "@/components/ui/Button";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { IconSend, IconUpload } from "@/components/icons";
 import {
+  useGetAppSettingsQuery,
   useGetSupportChatQuery,
   useSendSupportMessageMutation,
   type SupportChatMessage,
 } from "@/services/api";
-import { getApiErrorMessage } from "@/utils/apiError";
+import { getApiErrorMessage, isSupportChatOffError } from "@/utils/apiError";
 
 const POLL_INTERVAL_MS = 8000;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -34,9 +35,18 @@ const clockLabel = (value?: string | null) => {
 
 export default function ChatPage() {
   const { t } = useTranslation();
-  const { data, isLoading, error } = useGetSupportChatQuery(undefined, {
+  // The super admin can switch support chat off; then nothing here polls.
+  const { data: appSettings } = useGetAppSettingsQuery();
+  const [refusedByServer, setRefusedByServer] = useState(false);
+  const chatOn = appSettings?.support_chat_enabled !== false && !refusedByServer;
+  const { data, isLoading, error, isFetching } = useGetSupportChatQuery(undefined, {
+    skip: !chatOn,
     pollingInterval: POLL_INTERVAL_MS,
+    refetchOnMountOrArgChange: true,
   });
+  useEffect(() => {
+    if (!isFetching && isSupportChatOffError(error)) setRefusedByServer(true);
+  }, [error, isFetching]);
   const [sendMessage, { isLoading: sending }] = useSendSupportMessageMutation();
 
   const [draft, setDraft] = useState("");
@@ -87,6 +97,14 @@ export default function ChatPage() {
       setSendError(getApiErrorMessage(err, t("common.unexpected")));
     }
   };
+
+  if (!chatOn) {
+    return (
+      <AppShell title={t("common.support")}>
+        <EmptyState title={t("chat.off")} />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell fill title={t("common.support")} subtitle={data?.conversation?.status ?? undefined}>

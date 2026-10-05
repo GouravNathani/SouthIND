@@ -11,6 +11,7 @@ import {
   IconUser,
   IconWithdraw,
 } from "@/components/icons";
+import { useGetAppSettingsQuery } from "@/services/api";
 import { useTheme } from "@/theme/ThemeProvider";
 import { BrandMark } from "@/components/Brand";
 import { useTranslation } from "react-i18next";
@@ -66,6 +67,10 @@ export default function AppShell({
   const { mode, toggleMode } = useTheme();
   const location = useLocation();
 
+  // No Support entry while the super admin has support chat switched off.
+  const { data: appSettings } = useGetAppSettingsQuery();
+  const nav = appSettings?.support_chat_enabled === false ? NAV.filter((entry) => entry.to !== "/chat") : NAV;
+
   const activeEntry = NAV.find((entry) => location.pathname.startsWith(entry.to));
 
   return (
@@ -95,7 +100,7 @@ export default function AppShell({
           </span>
         </div>
 
-        {NAV.map(({ to, labelKey, Icon }) => (
+        {nav.map(({ to, labelKey, Icon }) => (
           <NavLink
             key={to}
             to={to}
