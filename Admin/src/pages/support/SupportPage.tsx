@@ -7,6 +7,7 @@ import { Input, Select } from "@/components/ui/Field";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { IconSend, IconUpload } from "@/components/icons";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
+import { useSupportChatEnabled } from "@/hooks/useSupportChatEnabled";
 import {
   useGetSupportConversationsQuery,
   useGetSupportThreadQuery,
@@ -41,9 +42,11 @@ export default function SupportPage() {
     return () => window.clearTimeout(timer);
   }, [search]);
 
+  // While the super admin has support chat switched off, nothing here polls.
+  const supportChatOn = useSupportChatEnabled();
   const list = useGetSupportConversationsQuery(
     { status: status || undefined, search: debouncedSearch || undefined },
-    { pollingInterval: LIST_POLL_MS }
+    { skip: !supportChatOn, pollingInterval: LIST_POLL_MS, refetchOnMountOrArgChange: true }
   );
   useSessionGuard(list.error);
 
@@ -54,6 +57,19 @@ export default function SupportPage() {
   useEffect(() => {
     if (activeId === null && conversations.length) setActiveId(conversations[0].id);
   }, [activeId, conversations]);
+
+  if (!supportChatOn) {
+    return (
+      <AdminShell title="Support" subtitle="Off">
+        <Card>
+          <EmptyState
+            title="Support chat is off"
+            body="The super admin has switched support chat off, so users cannot open it. Old chats are kept and come back when it is switched on again."
+          />
+        </Card>
+      </AdminShell>
+    );
+  }
 
   return (
     <AdminShell title="Support" subtitle={`${conversations.length} conversations`}>

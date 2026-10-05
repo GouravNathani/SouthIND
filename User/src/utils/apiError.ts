@@ -27,3 +27,9 @@ export const getApiErrorMessage = (error: unknown, fallback = "Something went wr
   }
   return fallback;
 };
+
+/** The API refused a support chat call because the super admin switched chat off. */
+export const isSupportChatOffError = (error: unknown): boolean =>
+  isFetchError(error) &&
+  error.status === 403 &&
+  (error.data as { code?: string } | undefined)?.code === "support_chat_disabled";

@@ -87,7 +87,9 @@ export default function DashboardPage() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <QuickLink to="/winners" icon={<IconTrophy size={18} />} label={t("winner.title")} />
-          <QuickLink to="/chat" icon={<IconChat size={18} />} label={t("common.support")} />
+          {appSettings?.support_chat_enabled !== false ? (
+            <QuickLink to="/chat" icon={<IconChat size={18} />} label={t("common.support")} />
+          ) : null}
         </div>
       </div>
     </AppShell>

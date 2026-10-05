@@ -1,11 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
+  useGetCurrentUserQuery,
   useGetDepositsQuery,
   useGetWithdrawalsQuery,
   useLogoutMutation,
 } from "@/services/api";
 import { useTheme } from "@/theme/ThemeProvider";
+import { useSupportChatEnabled } from "@/hooks/useSupportChatEnabled";
 import { BrandMark } from "@/components/Brand";
 import {
   IconAccounts,
@@ -82,6 +84,12 @@ export default function AdminShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [logout] = useLogoutMutation();
 
+  // /me carries features.support_chat; refreshed at most every five minutes as
+  // the admin moves between pages, so switching chat off needs no extra polling.
+  useGetCurrentUserQuery(undefined, { refetchOnMountOrArgChange: 300 });
+  const supportChatOn = useSupportChatEnabled();
+  const nav = supportChatOn ? NAV : NAV.filter((entry) => entry.to !== "/support");
+
   // Queue badges. Polled rather than pushed: a stale "3 pending" badge is the
   // difference between a payout going out in a minute and in an hour.
   const { data: deposits = [] } = useGetDepositsQuery(undefined, {
@@ -120,7 +128,7 @@ export default function AdminShell({
 
   const navList = (
     <ul className="min-w-0 space-y-0.5">
-      {NAV.map(({ to, label, Icon, queue }) => {
+      {nav.map(({ to, label, Icon, queue }) => {
         const count = queue ? badges[queue] : 0;
         return (
           <li key={to} className="min-w-0">

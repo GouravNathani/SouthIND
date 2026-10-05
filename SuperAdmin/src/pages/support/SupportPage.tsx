@@ -8,6 +8,7 @@ import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { IconSend, IconUpload } from "@/components/icons";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import {
+  useGetGlobalSettingsQuery,
   useGetSupportConversationsQuery,
   useGetSupportThreadQuery,
   useSendSupportMessageMutation,
@@ -41,9 +42,12 @@ export default function SupportPage() {
     return () => window.clearTimeout(timer);
   }, [search]);
 
+  // Support chat switched off in Global settings: nothing here polls.
+  const { data: settings } = useGetGlobalSettingsQuery();
+  const supportChatOn = settings?.support_chat_enabled !== false;
   const list = useGetSupportConversationsQuery(
     { status: status || undefined, search: debouncedSearch || undefined },
-    { pollingInterval: LIST_POLL_MS }
+    { skip: !supportChatOn, pollingInterval: LIST_POLL_MS, refetchOnMountOrArgChange: true }
   );
   useSessionGuard(list.error);
 
@@ -54,6 +58,19 @@ export default function SupportPage() {
   useEffect(() => {
     if (activeId === null && conversations.length) setActiveId(conversations[0].id);
   }, [activeId, conversations]);
+
+  if (!supportChatOn) {
+    return (
+      <SuperShell title="Support" subtitle="Off">
+        <Card>
+          <EmptyState
+            title="Support chat is off"
+            body="Users and branch admins cannot open support chat, and no panel polls it. Old chats are kept; switch it back on in Global settings."
+          />
+        </Card>
+      </SuperShell>
+    );
+  }
 
   return (
     <SuperShell title="Support" subtitle={`${conversations.length} conversations`}>

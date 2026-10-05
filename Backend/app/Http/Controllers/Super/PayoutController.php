@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Super;
 use App\Support\Query\DateBucket;
 use App\Http\Controllers\Controller;
 use App\Models\Deposit;
+use App\Models\WalletMonthlyPayout;
 use App\Support\Wallet\WalletService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Developer payout / billing for the Super Admin panel.
@@ -94,6 +96,12 @@ class PayoutController extends Controller
             $startMonth = $year === $currentYear ? $currentMonth : 13;
         }
 
+        // What the nightly wallet:monthly-payout deducted for each month. Bills are
+        // network-wide, so a single-branch view shows none.
+        $deductions = !$branchId && Schema::hasTable('wallet_monthly_payouts')
+            ? WalletMonthlyPayout::query()->where('month', 'like', sprintf('%04d-%%', $year))->get()->keyBy('month')
+            : collect();
+
         $data = [];
         $yearTotal = 0.0;
         $yearCount = 0;
@@ -114,6 +122,11 @@ class PayoutController extends Controller
                 'approved_total' => round($total, 2),
                 'deposit_count' => $count,
                 'payout' => $rowPayout,
+                'deduction' => ($deduction = $deductions->get($ym)) ? [
+                    'status' => $deduction->status,
+                    'coins' => (float) $deduction->coins,
+                    'settled_at' => $deduction->settled_at?->toIso8601String(),
+                ] : null,
             ];
         }
 

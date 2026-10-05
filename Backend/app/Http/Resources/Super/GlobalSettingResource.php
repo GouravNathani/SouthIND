@@ -21,6 +21,7 @@ class GlobalSettingResource extends JsonResource
             'mask_user_phone' => (bool) $this->mask_user_phone,
             'user_panel_maintenance_enabled' => (bool) $this->user_panel_maintenance_enabled,
             'bonus_deposit_enabled' => (bool) $this->bonus_deposit_enabled,
+            'support_chat_enabled' => (bool) ($this->support_chat_enabled ?? true),
         ];
     }
 }

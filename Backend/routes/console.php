@@ -44,6 +44,31 @@ Schedule::command('wallet:daily-payout')
     ->dailyAt('03:00')
     ->withoutOverlapping(120);
 
+Artisan::command('wallet:monthly-payout {--month= : Bill only this finished month (YYYY-MM)}', function (): int {
+    // Monthly Payout — the developer's percent of each month's approved deposits —
+    // deducted from the BookFlow wallet as one deduction per finished month,
+    // oldest first (from config payout.start_month). A failed month is owed and
+    // retried every night with the same amount; the per-month reference makes a
+    // retry a replay at Control, never a second deduction.
+    $wallet = app(\App\Support\Wallet\WalletService::class);
+
+    $result = $wallet->runMonthlyPayout($this->option('month') ?: null);
+
+    $this->info("Monthly payout: {$result['months']} month(s), settled {$result['settled']}, owed {$result['owed']}, total {$result['coins']} coins.");
+    Log::info('Wallet monthly payout run.', $result);
+
+    $wallet->reportOwed();
+
+    return \Illuminate\Console\Command::SUCCESS;
+})->purpose('Deduct each finished month\'s Monthly Payout from the wallet as a single deduction');
+
+// 03:30 every night (after the daily payout): bills last month once it is over
+// and retries any owed month. Nightly rather than once a month, so a missed
+// cron run on the 1st never skips a month.
+Schedule::command('wallet:monthly-payout')
+    ->dailyAt('03:30')
+    ->withoutOverlapping(120);
+
 Artisan::command('wallet:settle {--limit=60 : Max days to retry}', function (): int {
     // Manual "settle now" (also used by the SuperAdmin button): same run as the
     // nightly payout, on demand.

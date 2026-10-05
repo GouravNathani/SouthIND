@@ -320,6 +320,7 @@ export type GlobalSettings = {
   mask_user_phone?: boolean;
   user_panel_maintenance_enabled?: boolean;
   bonus_deposit_enabled?: boolean;
+  support_chat_enabled?: boolean;
 };
 
 export type UserActivityPoint = {
@@ -357,6 +358,12 @@ export type MonthlyPayoutRow = {
   approved_total: number;
   deposit_count: number;
   payout: number;
+  // What the nightly monthly payout deducted for this month (null: not billed yet).
+  deduction?: {
+    status: string;
+    coins: number;
+    settled_at: string | null;
+  } | null;
 };
 
 export type DailyPayoutRow = {

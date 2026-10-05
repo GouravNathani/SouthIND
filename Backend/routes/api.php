@@ -99,8 +99,10 @@ Route::middleware('user-panel-open')->group(function () {
             Route::post('bonus/redeem', [UserBonusCodeController::class, 'redeem']);
         });
 
-        Route::get('support/chat', [UserSupportChatController::class, 'show']);
-        Route::post('support/chat', [UserSupportChatController::class, 'send']);
+        Route::middleware('support-chat-on')->group(function () {
+            Route::get('support/chat', [UserSupportChatController::class, 'show']);
+            Route::post('support/chat', [UserSupportChatController::class, 'send']);
+        });
 
         // Winner Streak — recent winners for the caller's own branch. Reads
         // frozen entries only, and only the fields the branch admin published.
@@ -186,12 +188,14 @@ Route::prefix('admin')->group(function () {
             Route::get('referral/audits', [AdminReferralController::class, 'audits']);
         });
 
-        Route::get('support/conversations', [AdminSupportChatController::class, 'conversations']);
-        Route::get('support/conversations/{conversation}', [AdminSupportChatController::class, 'show']);
-        Route::post('support/conversations/{conversation}/messages', [AdminSupportChatController::class, 'send']);
-        Route::patch('support/conversations/{conversation}/messages/{message}', [AdminSupportChatController::class, 'update']);
-        Route::delete('support/conversations/{conversation}/messages/{message}', [AdminSupportChatController::class, 'destroy']);
-        Route::patch('support/conversations/{conversation}/status', [AdminSupportChatController::class, 'updateStatus']);
+        Route::middleware('support-chat-on')->group(function () {
+            Route::get('support/conversations', [AdminSupportChatController::class, 'conversations']);
+            Route::get('support/conversations/{conversation}', [AdminSupportChatController::class, 'show']);
+            Route::post('support/conversations/{conversation}/messages', [AdminSupportChatController::class, 'send']);
+            Route::patch('support/conversations/{conversation}/messages/{message}', [AdminSupportChatController::class, 'update']);
+            Route::delete('support/conversations/{conversation}/messages/{message}', [AdminSupportChatController::class, 'destroy']);
+            Route::patch('support/conversations/{conversation}/status', [AdminSupportChatController::class, 'updateStatus']);
+        });
 
         // WhatsApp inbox (Cloud API). Admins chat with contacts using the accounts
         // a super admin configured; account/token management stays super-admin only.

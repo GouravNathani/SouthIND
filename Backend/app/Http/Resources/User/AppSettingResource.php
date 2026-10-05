@@ -37,6 +37,7 @@ class AppSettingResource extends JsonResource
             // super admin (global) has switched it on.
             'bonus_deposit_enabled' =>
                 (bool) $this->bonus_deposit_enabled || (bool) ($global?->bonus_deposit_enabled),
+            'support_chat_enabled' => (bool) ($global?->support_chat_enabled ?? true),
         ];
     }
 }

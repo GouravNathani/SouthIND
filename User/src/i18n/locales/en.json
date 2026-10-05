@@ -245,6 +245,7 @@
     "mpinChanged": "MPIN changed."
   },
   "chat": {
+    "off": "Support chat is not available right now.",
     "empty": "No messages yet",
     "emptyBody": "Send a message and support will reply here.",
     "error": "Could not load the conversation.",

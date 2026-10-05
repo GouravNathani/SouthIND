@@ -906,7 +906,8 @@ export const api = createApi({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["GlobalSettings"],
+      // "Me" carries features.support_chat, which the sidebar and Support page read.
+      invalidatesTags: ["GlobalSettings", "Me"],
     }),
     // Winner Streak. Every call except the cross-branch summary carries a
     // branch_id — the owner always operates on one branch's board at a time.

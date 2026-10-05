@@ -2,9 +2,11 @@
 
 namespace App\Support\Wallet;
 
+use App\Models\Deposit;
 use App\Models\SupportMessage;
 use App\Models\WalletCharge;
 use App\Models\WalletDailyPayout;
+use App\Models\WalletMonthlyPayout;
 use App\Models\WalletState;
 use App\Models\WhatsAppMessage;
 use Carbon\CarbonInterface;
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Orchestrates the outbound BookFlowControl wallet integration: reads the
@@ -45,6 +48,9 @@ class WalletService
      * @var array<string, mixed>|null
      */
     private ?array $pricingMemo = null;
+
+    /** Whether wallet_monthly_payouts exists (checked once per instance). */
+    private ?bool $monthlyPayoutsReady = null;
 
     public function __construct(
         private readonly BookFlowWalletClient $client,
@@ -265,13 +271,19 @@ class WalletService
     // ── Owed ─────────────────────────────────────────────────────────────────
 
     /**
-     * Coins Control could not collect: every past day whose single payout failed
-     * (API down, insufficient funds, anything). Today's charges are NOT owed —
-     * they have not been billed yet; see pendingTodayCoins().
+     * Coins Control could not collect: every past day — and every finished month's
+     * Monthly Payout — whose single payout failed (API down, insufficient funds,
+     * anything). Today's charges are NOT owed — they have not been billed yet;
+     * see pendingTodayCoins().
      */
     public function owedCoins(): float
     {
-        return (float) WalletDailyPayout::query()->owed()->sum('coins');
+        $days = (float) WalletDailyPayout::query()->owed()->sum('coins');
+        $months = $this->hasMonthlyPayouts()
+            ? (float) WalletMonthlyPayout::query()->owed()->sum('coins')
+            : 0.0;
+
+        return round($days + $months, 2);
     }
 
     /**
@@ -287,6 +299,13 @@ class WalletService
         foreach (WalletDailyPayout::query()->owed()->orderByDesc('payout_date')->get() as $payout) {
             $key = $payout->payout_date->format('Y-m');
             $months[$key] = round(($months[$key] ?? 0) + (float) $payout->coins, 2);
+        }
+
+        if ($this->hasMonthlyPayouts()) {
+            foreach (WalletMonthlyPayout::query()->owed()->get() as $payout) {
+                $months[$payout->month] = round(($months[$payout->month] ?? 0) + (float) $payout->coins, 2);
+            }
+            krsort($months);
         }
 
         return $months;
@@ -567,7 +586,236 @@ class WalletService
             $this->closeChargesForDay($payout, null);
         }
 
+        if ($this->hasMonthlyPayouts()) {
+            $monthly = WalletMonthlyPayout::query()->owed();
+            if ($month !== 'all') {
+                $monthly->where('month', $month);
+            }
+
+            foreach ($monthly->get() as $payout) {
+                $coins = round($coins + (float) $payout->coins, 2);
+
+                $payout->forceFill([
+                    'status' => WalletMonthlyPayout::STATUS_CLEARED,
+                    'cleared_reference' => $reference,
+                    'settled_at' => now(),
+                    'error_code' => null,
+                ])->save();
+            }
+        }
+
         return ['cleared_coins' => $coins, 'days' => $days];
+    }
+
+    // ── Monthly Payout ─────────────────────────────────────────────────────────
+
+    /**
+     * Bill each finished month's Monthly Payout (the developer's percent of that
+     * month's approved deposits, all branches) as ONE deduction, oldest first.
+     *
+     * Runs every night: a month is billed once it is over, an owed month is
+     * retried with the same amount, and a paid month is never billed again —
+     * the per-month reference turns any retry into a replay at Control. The
+     * percent and amount are frozen when a month is first billed, so a later
+     * rate change never alters what an unpaid month asks for.
+     *
+     * @return array{months: int, settled: int, owed: int, coins: float}
+     */
+    public function runMonthlyPayout(?string $month = null): array
+    {
+        $result = ['months' => 0, 'settled' => 0, 'owed' => 0, 'coins' => 0.0];
+
+        // The table may be added by hand on a live panel; until then do nothing.
+        if (!$this->hasMonthlyPayouts()) {
+            return $result;
+        }
+
+        // Read the percent from Control itself. Without a Control answer the
+        // percent would be the self-wallet default, and freezing that into a
+        // month would bill it at the wrong rate for good.
+        if ($this->snapshot(fresh: true)['self'] ?? false) {
+            Log::info('Monthly payout skipped: no wallet rate from Control.');
+
+            return $result;
+        }
+
+        foreach ($this->monthsToBill($month) as $monthStart) {
+            $payout = $this->buildMonthPayout($monthStart);
+            if ($payout === null) {
+                continue;
+            }
+
+            $result['months']++;
+            $result['coins'] = round($result['coins'] + (float) $payout->coins, 2);
+
+            if ($this->settleMonth($payout)) {
+                $result['settled']++;
+            } else {
+                $result['owed']++;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Finished months from the first billable one (config payout.start_month,
+     * or the month of the first approved deposit if later) up to last month.
+     *
+     * @return list<Carbon>
+     */
+    private function monthsToBill(?string $only): array
+    {
+        $tz = config('app.timezone');
+        $thisMonth = Carbon::now($tz)->startOfMonth();
+
+        if ($only !== null) {
+            if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $only)) {
+                return [];
+            }
+            $month = Carbon::createFromFormat('Y-m-d H:i:s', "{$only}-01 00:00:00", $tz);
+
+            return $month->lt($thisMonth) ? [$month] : [];
+        }
+
+        [, $dbTz] = $this->payoutTimezones();
+        $earliest = $this->approvedDeposits()
+            ->selectRaw('MIN(COALESCE(approved_at, created_at)) as m')
+            ->value('m');
+        if (!$earliest) {
+            return [];
+        }
+
+        $first = Carbon::parse($earliest, $dbTz)->setTimezone($tz)->startOfMonth();
+        $startMonth = (string) config('payout.start_month', '');
+        if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $startMonth)) {
+            $floor = Carbon::createFromFormat('Y-m-d H:i:s', "{$startMonth}-01 00:00:00", $tz);
+            if ($first->lt($floor)) {
+                $first = $floor;
+            }
+        }
+
+        $months = [];
+        for ($cursor = $first->copy(); $cursor->lt($thisMonth); $cursor->addMonthNoOverflow()) {
+            $months[] = $cursor->copy();
+        }
+
+        return $months;
+    }
+
+    /**
+     * The month's billing row: an existing unpaid one as it was first worked
+     * out, or a new one priced now. Null when the month is already closed.
+     */
+    private function buildMonthPayout(Carbon $monthStart): ?WalletMonthlyPayout
+    {
+        $key = $monthStart->format('Y-m');
+        $existing = WalletMonthlyPayout::query()->where('month', $key)->first();
+
+        if ($existing !== null) {
+            return $existing->isClosed() ? null : $existing;
+        }
+
+        [, $dbTz] = $this->payoutTimezones();
+        $totals = $this->approvedDeposits()
+            ->whereRaw('COALESCE(approved_at, created_at) >= ? AND COALESCE(approved_at, created_at) < ?', [
+                $monthStart->copy()->setTimezone($dbTz)->toDateTimeString(),
+                $monthStart->copy()->addMonthNoOverflow()->setTimezone($dbTz)->toDateTimeString(),
+            ])
+            ->selectRaw('COALESCE(SUM(amount), 0) as total')
+            ->selectRaw('COUNT(*) as cnt')
+            ->first();
+
+        $approved = round((float) ($totals->total ?? 0), 2);
+        $percent = $this->payoutPercent();
+
+        return WalletMonthlyPayout::create([
+            'month' => $key,
+            'approved_total' => $approved,
+            'deposit_count' => (int) ($totals->cnt ?? 0),
+            'percent' => $percent,
+            // Same formula as the Super Admin Monthly Payout page.
+            'coins' => round($approved * $percent / 100, 2),
+            'reference' => $this->monthReferenceFor($key),
+            'status' => WalletMonthlyPayout::STATUS_PENDING,
+        ]);
+    }
+
+    /**
+     * Deduct one month's payout in a single call and record the outcome.
+     */
+    private function settleMonth(WalletMonthlyPayout $payout): bool
+    {
+        $payout->attempts = (int) $payout->attempts + 1;
+        $payout->last_attempt_at = now();
+
+        if ((float) $payout->coins <= 0) {
+            $payout->forceFill([
+                'status' => WalletMonthlyPayout::STATUS_SKIPPED,
+                'error_code' => null,
+                'settled_at' => now(),
+            ])->save();
+
+            return true;
+        }
+
+        $res = $this->client->deduct((float) $payout->coins, $payout->reference);
+
+        if ($res['ok'] && is_array($res['data'])) {
+            Cache::forget(self::DOWN_CACHE_KEY);
+
+            $payout->forceFill([
+                'status' => WalletMonthlyPayout::STATUS_SETTLED,
+                'external_transaction_id' => $res['data']['transaction_id'] ?? null,
+                'balance_after' => $res['data']['balance'] ?? null,
+                'error_code' => null,
+                'settled_at' => now(),
+            ])->save();
+
+            $this->cacheBalance($res['data']['balance'] ?? null);
+
+            return true;
+        }
+
+        $payout->forceFill([
+            'status' => WalletMonthlyPayout::STATUS_OWED,
+            'error_code' => $res['code'] ?? ('http_' . $res['status']),
+        ])->save();
+
+        return false;
+    }
+
+    /**
+     * The monthly table may not exist yet on a live panel (it can be added by
+     * hand); every reader checks this instead of failing.
+     */
+    private function hasMonthlyPayouts(): bool
+    {
+        return $this->monthlyPayoutsReady ??= Schema::hasTable('wallet_monthly_payouts');
+    }
+
+    private function approvedDeposits()
+    {
+        return Deposit::query()->where('status', Deposit::STATUS_APPROVED);
+    }
+
+    /**
+     * @return array{0: string, 1: string} [appTimezone, dbTimezone]
+     */
+    private function payoutTimezones(): array
+    {
+        $tz = config('app.timezone');
+        $connection = config('database.default');
+
+        return [$tz, config('database.connections.' . $connection . '.timezone') ?: $tz];
+    }
+
+    /**
+     * Idempotency key for a whole month's payout, e.g. sind-month-2026-09.
+     */
+    private function monthReferenceFor(string $month): string
+    {
+        return $this->referencePrefix() . '-month-' . $month;
     }
 
     // ── Internals ──────────────────────────────────────────────────────────────

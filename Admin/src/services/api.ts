@@ -1,5 +1,11 @@
-import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query";
+import type {
+  BaseQueryApi,
+  BaseQueryFn,
+  FetchArgs,
+  FetchBaseQueryError,
+} from "@reduxjs/toolkit/query";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { isSupportChatOffError } from "../utils/errors";
 import { withInFlightDedup } from "./dedupeBaseQuery";
 
 import type {
@@ -839,12 +845,16 @@ export const api = createApi({
       transformResponse: (
         response: { data?: SupportConversationSummary[] } | SupportConversationSummary[],
       ) => unwrapData<SupportConversationSummary[]>(response),
+      onQueryStarted: (_arg, { dispatch, queryFulfilled }) =>
+        markSupportChatOffOnRefusal(queryFulfilled, dispatch),
       providesTags: [{ type: "SupportConversations", id: "LIST" }],
     }),
     getSupportThread: builder.query<SupportThread, number>({
       query: (id) => `/support/conversations/${id}`,
       transformResponse: (response: { data?: SupportThread } | SupportThread) =>
         unwrapData<SupportThread>(response),
+      onQueryStarted: (_arg, { dispatch, queryFulfilled }) =>
+        markSupportChatOffOnRefusal(queryFulfilled, dispatch),
       providesTags: (_result, _error, id) => [{ type: "SupportThread", id }],
     }),
     sendSupportMessage: builder.mutation<
@@ -858,6 +868,8 @@ export const api = createApi({
       }),
       transformResponse: (response: { data?: SupportMessage } | SupportMessage) =>
         unwrapData<SupportMessage>(response),
+      onQueryStarted: (_arg, { dispatch, queryFulfilled }) =>
+        markSupportChatOffOnRefusal(queryFulfilled, dispatch),
       invalidatesTags: (_result, _error, { id }) => [
         { type: "SupportThread", id },
         { type: "SupportConversations", id: "LIST" },
@@ -1089,6 +1101,35 @@ export const api = createApi({
     }),
   }),
 });
+
+/**
+ * Once the super admin switches support chat off, the API answers chat calls
+ * with 403 `support_chat_disabled`. Note that in the /me cache straight away so
+ * every chat poller (sidebar badge, Support page) stops now instead of at the
+ * next /me poll; that poll also switches it back on.
+ */
+function markSupportChatOffOnRefusal(
+  queryFulfilled: Promise<unknown>,
+  dispatch: BaseQueryApi["dispatch"],
+): Promise<void> {
+  return queryFulfilled.then(
+    () => undefined,
+    (result: { error?: unknown } | undefined) => {
+      if (isSupportChatOffError(result?.error)) {
+        dispatch(markSupportChatOff());
+      }
+    },
+  );
+}
+
+function markSupportChatOff() {
+  return api.util.updateQueryData("getCurrentUser", undefined, (draft) => {
+    draft.features = {
+      ...(draft.features as Record<string, unknown> | undefined),
+      support_chat: false,
+    };
+  });
+}
 
 export const {
   useLoginMutation,

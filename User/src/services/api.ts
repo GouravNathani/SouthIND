@@ -78,6 +78,7 @@ export interface AppSettings {
   min_deposit_amount?: number | string | null;
   min_withdrawal_amount?: number | string | null;
   bonus_deposit_enabled?: boolean;
+  support_chat_enabled?: boolean;
 }
 
 export interface GlobalSettings {

@@ -20,6 +20,7 @@ class GlobalSettingRequest extends FormRequest
             'mask_user_phone' => ['sometimes', 'boolean'],
             'user_panel_maintenance_enabled' => ['sometimes', 'boolean'],
             'bonus_deposit_enabled' => ['sometimes', 'boolean'],
+            'support_chat_enabled' => ['sometimes', 'boolean'],
         ];
     }
 }
