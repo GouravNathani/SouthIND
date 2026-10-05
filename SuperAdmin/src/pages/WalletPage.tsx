@@ -69,7 +69,7 @@ export default function WalletPage() {
 
         <Card>
           <CardTitle hint={<Badge tone={source.tone}>{source.label}</Badge>}>Balance</CardTitle>
-          <p className="tabular text-3xl font-semibold text-accent">
+          <p className="tabular text-2xl font-semibold break-words text-accent sm:text-3xl">
             {/* A stood-in wallet has no Control balance — the local ledger is the
                 only number that means anything, and it runs negative. */}
             {data.is_self ? coins(data.local_balance) : coins(wallet?.balance)}

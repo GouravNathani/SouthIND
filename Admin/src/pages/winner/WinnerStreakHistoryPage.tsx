@@ -88,7 +88,7 @@ export default function WinnerStreakHistoryPage() {
       action={
         <Link
           to="/winner-streak"
-          className="inline-flex h-9 shrink-0 items-center rounded-md border border-border px-3 text-[13px] font-semibold text-muted"
+          className="inline-flex h-9 shrink-0 items-center rounded-full border border-border bg-surface px-3.5 text-[13px] font-semibold text-text transition-colors hover:border-border-strong"
         >
           Live board
         </Link>
@@ -96,7 +96,7 @@ export default function WinnerStreakHistoryPage() {
     >
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex min-w-0 flex-wrap gap-2">
             {PERIODS.map((option) => (
               <button
                 key={option}
@@ -124,7 +124,7 @@ export default function WinnerStreakHistoryPage() {
                   setNotice(null);
                 }}
                 className={[
-                  "h-9 rounded-md border px-3 text-xs font-semibold transition-colors",
+                  "h-9 rounded-full border px-3.5 text-xs font-semibold transition-colors",
                   limit === option
                     ? "border-accent text-accent"
                     : "border-border text-faint",

@@ -1,8 +1,16 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { IconChevronDown } from "@/components/icons";
 
+// One focus treatment for every control: the accent border plus a soft halo.
+// The global :focus-visible outline sits in @layer base, so focus:outline-none
+// here wins and the two never stack into a double ring.
 const CONTROL =
-  "w-full min-w-0 rounded-md border border-border bg-surface-2 px-3.5 py-3 text-sm text-text " +
-  "placeholder:text-faint focus:border-accent focus:outline-none disabled:opacity-60";
+  "w-full min-w-0 rounded-md border border-border bg-surface-2 px-3.5 text-sm text-text " +
+  "placeholder:text-faint focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-soft)] focus:outline-none " +
+  "transition-[border-color,box-shadow] duration-150 disabled:opacity-60";
+
+// h-11 matches the md Button, so a field and a button in one row line up.
+const SINGLE_LINE = "h-11";
 
 function Shell({
   label,
@@ -43,7 +51,7 @@ export function Input({
     <Shell label={label} hint={hint} error={error}>
       <input
         {...rest}
-        className={[CONTROL, error ? "border-neg" : "", className].join(" ")}
+        className={[CONTROL, SINGLE_LINE, error ? "border-neg" : "", className].join(" ")}
       />
     </Shell>
   );
@@ -62,11 +70,12 @@ export function Textarea({
 }) {
   return (
     <Shell label={label} hint={hint} error={error}>
-      <textarea {...rest} className={[CONTROL, "resize-none", className].join(" ")} />
+      <textarea {...rest} className={[CONTROL, "resize-none py-3", className].join(" ")} />
     </Shell>
   );
 }
 
+/** Native <select> for long or data-driven lists, drawn with the app's own chevron. */
 export function Select({
   label,
   hint,
@@ -81,9 +90,17 @@ export function Select({
 }) {
   return (
     <Shell label={label} hint={hint} error={error}>
-      <select {...rest} className={[CONTROL, className].join(" ")}>
-        {children}
-      </select>
+      <span className="relative block min-w-0">
+        <select
+          {...rest}
+          className={[CONTROL, SINGLE_LINE, "cursor-pointer appearance-none truncate pr-10", className].join(" ")}
+        >
+          {children}
+        </select>
+        <span className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-muted">
+          <IconChevronDown size={16} />
+        </span>
+      </span>
     </Shell>
   );
 }

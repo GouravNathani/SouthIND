@@ -88,9 +88,14 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-:where(a, button, input, textarea, select, [tabindex]):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+/* In the base layer, not unlayered: an unlayered rule beats every Tailwind utility,
+   so focus:outline-none on the fields could not switch it off and the outline
+   stacked on their accent border as a double ring. */
+@layer base {
+  :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 }
 
 /* Scrollbars are hidden app-wide; every scroll region is finger- or wheel-driven. */

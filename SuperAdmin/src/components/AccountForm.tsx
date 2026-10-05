@@ -1,7 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { Input, Select, Textarea } from "@/components/ui/Field";
+import { Input, Textarea } from "@/components/ui/Field";
+import Segmented from "@/components/ui/Segmented";
 import { ErrorNote } from "@/components/ui/Feedback";
 import type { AccountRecord } from "@/types/api";
 
@@ -107,20 +108,26 @@ export default function AccountForm({
             onChange={(event) => patch({ holder_name: event.target.value })}
             required
           />
-          <Select label="Type" value={values.type} onChange={(event) => patch({ type: event.target.value })}>
-            <option value="upi">UPI</option>
-            <option value="bank">Bank</option>
-            <option value="qr">QR</option>
-          </Select>
-          <Select
+          <Segmented
+            label="Type"
+            value={values.type}
+            onChange={(type) => patch({ type })}
+            options={[
+              { value: "upi", label: "UPI" },
+              { value: "bank", label: "Bank" },
+              { value: "qr", label: "QR" },
+            ]}
+          />
+          <Segmented
             label="Used for"
             value={values.used_for}
-            onChange={(event) => patch({ used_for: event.target.value })}
-          >
-            <option value="deposit">Deposit</option>
-            <option value="withdrawal">Withdrawal</option>
-            <option value="both">Both</option>
-          </Select>
+            onChange={(used_for) => patch({ used_for })}
+            options={[
+              { value: "deposit", label: "Deposit" },
+              { value: "withdrawal", label: "Withdrawal" },
+              { value: "both", label: "Both" },
+            ]}
+          />
         </div>
       </Card>
 
@@ -173,14 +180,15 @@ export default function AccountForm({
             value={values.max_deposit}
             onChange={(event) => patch({ max_deposit: event.target.value })}
           />
-          <Select
+          <Segmented
             label="Status"
             value={values.status}
-            onChange={(event) => patch({ status: event.target.value })}
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </Select>
+            onChange={(status) => patch({ status })}
+            options={[
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
+            ]}
+          />
         </div>
 
         <div className="mt-3">

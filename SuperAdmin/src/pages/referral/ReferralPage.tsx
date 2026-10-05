@@ -5,7 +5,8 @@ import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge, { statusTone } from "@/components/ui/Badge";
 import DataTable, { type Column } from "@/components/ui/DataTable";
-import { Input, Select } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Field";
+import Segmented from "@/components/ui/Segmented";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import {
@@ -50,7 +51,7 @@ function ReferralBody({ branchId }: { branchId: number }) {
       }
     >
       <div className="space-y-4">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex min-w-0 flex-wrap gap-2">
           {TABS.map((option) => (
             <button
               key={option.id}
@@ -94,7 +95,7 @@ function OverviewTab({ branchId }: { branchId: number }) {
         <CardTitle hint={stats?.enabled ? "Live" : "Disabled"}>Commission liability</CardTitle>
         {/* Liability is available + pending: what the branch owes right now if
             every agent cashed out. It is the number that matters, not lifetime. */}
-        <p className="tabular text-3xl font-semibold text-accent">{money(stats?.liability)}</p>
+        <p className="tabular text-2xl font-semibold break-words text-accent sm:text-3xl">{money(stats?.liability)}</p>
 
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Stat label="Available" value={money(stats?.available_total)} />
@@ -247,15 +248,16 @@ function AgentsTab({ branchId }: { branchId: number }) {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <Select
+          <Segmented
             label="Status"
             value={agentStatus}
-            onChange={(event) => setAgentStatus(event.target.value)}
-          >
-            <option value="">All</option>
-            <option value="active">Active</option>
-            <option value="suspended">Suspended</option>
-          </Select>
+            onChange={setAgentStatus}
+            options={[
+              { value: "", label: "All" },
+              { value: "active", label: "Active" },
+              { value: "suspended", label: "Suspended" },
+            ]}
+          />
         </div>
       </Card>
 
@@ -356,13 +358,18 @@ function PayoutsTab({ branchId }: { branchId: number }) {
   return (
     <>
       <Card>
-        <div className="sm:max-w-xs">
-          <Select label="Status" value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="">All</option>
-          </Select>
+        <div className="sm:max-w-md">
+          <Segmented
+            label="Status"
+            value={status}
+            onChange={setStatus}
+            options={[
+              { value: "pending", label: "Pending" },
+              { value: "approved", label: "Approved" },
+              { value: "rejected", label: "Rejected" },
+              { value: "", label: "All" },
+            ]}
+          />
         </div>
       </Card>
 

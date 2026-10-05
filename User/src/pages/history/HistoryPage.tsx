@@ -87,7 +87,9 @@ export default function HistoryPage() {
           ))}
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        {/* Wraps rather than scrolls: in Tamil or Malayalam the four chips are wider
+            than a phone, and a hidden scrollbar gave no hint the last one existed. */}
+        <div className="flex flex-wrap gap-2">
           {FILTERS.map((key) => (
             <button
               key={key}
@@ -162,7 +164,9 @@ function RecordCard({
           <p className="tabular text-xl font-semibold">₹{inr(record.amount)}</p>
           <p className="truncate text-xs text-muted">{dateTime(record.created_at)}</p>
         </div>
-        <Badge tone={statusTone(record.status)}>{record.status}</Badge>
+        <Badge tone={statusTone(record.status)}>
+          {t(`history.filter.${normalizeStatus(record.status)}`, { defaultValue: record.status })}
+        </Badge>
       </div>
 
       {destination ? (

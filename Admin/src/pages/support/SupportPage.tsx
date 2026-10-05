@@ -3,7 +3,8 @@ import AdminShell from "@/components/AdminShell";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-import { Input, Select } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Field";
+import Segmented from "@/components/ui/Segmented";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { IconSend, IconUpload } from "@/components/icons";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -83,11 +84,16 @@ export default function SupportPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <Select label="Status" value={status} onChange={(event) => setStatus(event.target.value)}>
-                <option value="open">Open</option>
-                <option value="closed">Closed</option>
-                <option value="">All</option>
-              </Select>
+              <Segmented
+                label="Status"
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: "open", label: "Open" },
+                  { value: "closed", label: "Closed" },
+                  { value: "", label: "All" },
+                ]}
+              />
             </div>
           </Card>
 
@@ -230,8 +236,11 @@ function Thread({ conversationId }: { conversationId: number }) {
 
   if (isLoading && !data) return <Skeleton className="h-[60dvh] w-full" />;
 
+  // A fixed height (the viewport minus header and page padding), not a minimum:
+  // only then does the message list scroll inside the card and keep the header
+  // and composer in view.
   return (
-    <Card className="flex min-h-[60dvh] flex-col" padded={false}>
+    <Card className="flex h-[calc(100dvh-11rem)] min-h-[24rem] flex-col lg:h-[calc(100dvh-7.5rem)]" padded={false}>
       <div className="flex min-w-0 items-center gap-3 border-b border-border p-3">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-text">
@@ -270,7 +279,7 @@ function Thread({ conversationId }: { conversationId: number }) {
 
       {image ? (
         <div className="mx-3 mb-2 flex min-w-0 items-center gap-3 rounded-md border border-border bg-surface-2 p-2">
-          <img src={image} alt="" className="size-12 shrink-0 rounded object-cover" />
+          <img src={image} alt="" className="size-12 shrink-0 rounded-sm object-cover" />
           <span className="min-w-0 flex-1 truncate text-xs text-muted">Image ready to send</span>
           <Button size="sm" variant="ghost" onClick={() => setImage(null)}>
             Remove
@@ -338,7 +347,7 @@ function Bubble({ message }: { message: SupportMessage }) {
           src={message.image_url}
           alt=""
           loading="lazy"
-          className="mb-1.5 max-h-64 w-full rounded object-contain"
+          className="mb-1.5 max-h-64 w-full rounded-sm object-contain"
         />
       ) : null}
       {message.audio_url ? (

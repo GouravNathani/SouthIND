@@ -138,7 +138,7 @@ export default function ChatPage() {
 
         {image ? (
           <div className="flex min-w-0 items-center gap-3 rounded-md border border-border bg-surface p-2">
-            <img src={image} alt="" className="size-12 shrink-0 rounded object-cover" />
+            <img src={image} alt="" className="size-12 shrink-0 rounded-sm object-cover" />
             <span className="min-w-0 flex-1 truncate text-xs text-muted">{t("chat.imageReady")}</span>
             <Button size="sm" variant="ghost" type="button" onClick={() => setImage(null)}>
               {t("common.remove")}
@@ -216,7 +216,7 @@ function MessageBubble({
             src={message.image_url}
             alt=""
             loading="lazy"
-            className="mb-1.5 max-h-64 w-full rounded object-contain"
+            className="mb-1.5 max-h-64 w-full rounded-sm object-contain"
           />
         ) : null}
         {message.audio_url ? (

@@ -16,6 +16,7 @@ import {
   IconBonus,
   IconBranch,
   IconChat,
+  IconChevronDown,
   IconClose,
   IconDeposit,
   IconGlobe2,
@@ -215,23 +216,31 @@ export default function SuperShell({
     </div>
   );
 
+  // One branch means nothing to switch between (BranchContext selects it), so
+  // the picker only appears once a second branch exists.
+  const showPicker = branches.length > 1;
   const branchPicker = (
-    <select
-      value={branchId === null ? "all" : String(branchId)}
-      onChange={(event) =>
-        setBranchId(event.target.value === "all" ? null : Number(event.target.value))
-      }
-      aria-label="Branch"
-      disabled={branchesLoading}
-      className="h-9 max-w-[11rem] min-w-0 shrink truncate rounded-full border border-border bg-surface px-3 text-[13px] font-medium text-text focus:border-accent focus:outline-none"
-    >
-      <option value="all">All branches</option>
-      {branches.map((branch) => (
-        <option key={branch.id} value={branch.id}>
-          {branch.name}
-        </option>
-      ))}
-    </select>
+    <span className="relative block min-w-0">
+      <select
+        value={branchId === null ? "all" : String(branchId)}
+        onChange={(event) =>
+          setBranchId(event.target.value === "all" ? null : Number(event.target.value))
+        }
+        aria-label="Branch"
+        disabled={branchesLoading}
+        className="h-9 w-full min-w-0 cursor-pointer appearance-none truncate rounded-full border border-border bg-surface pr-8 pl-3.5 text-[13px] font-medium text-text transition-[border-color,box-shadow] duration-150 focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-soft)] focus:outline-none"
+      >
+        <option value="all">All branches</option>
+        {branches.map((branch) => (
+          <option key={branch.id} value={branch.id}>
+            {branch.name}
+          </option>
+        ))}
+      </select>
+      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted">
+        <IconChevronDown size={14} />
+      </span>
+    </span>
   );
 
   return (
@@ -255,7 +264,7 @@ export default function SuperShell({
           />
           <nav
             aria-label="Main"
-            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border bg-bg-elev p-3 shadow-lg"
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border bg-bg-elev p-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-lg"
           >
             <div className="flex items-start justify-between gap-2">
               {brand}
@@ -292,8 +301,14 @@ export default function SuperShell({
             </div>
 
             {action}
-            {branchPicker}
+            {showPicker ? <div className="hidden w-52 shrink-0 lg:block">{branchPicker}</div> : null}
           </div>
+
+          {/* On a phone the title, the page action and the menu button already fill
+              the bar, so the picker gets a row of its own instead of squeezing them. */}
+          {showPicker ? (
+            <div className="mx-auto w-full max-w-6xl px-4 pb-2.5 lg:hidden">{branchPicker}</div>
+          ) : null}
 
           {/* The wallet funds outbound messaging for every branch — when it lapses,
               WhatsApp and push stop silently, so it gets a banner, not a page. */}

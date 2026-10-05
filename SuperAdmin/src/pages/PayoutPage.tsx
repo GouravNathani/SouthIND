@@ -3,6 +3,7 @@ import SuperShell from "@/components/SuperShell";
 import Card, { CardTitle } from "@/components/ui/Card";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import { Input, Select } from "@/components/ui/Field";
+import Segmented from "@/components/ui/Segmented";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { useGetDailyPayoutQuery, useGetMonthlyPayoutQuery } from "@/services/api";
@@ -82,14 +83,15 @@ export default function PayoutPage() {
       <div className="space-y-4">
         <Card>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Select
+            <Segmented<Grain>
               label="Grain"
               value={grain}
-              onChange={(event) => setGrain(event.target.value as Grain)}
-            >
-              <option value="monthly">Month by month</option>
-              <option value="daily">Day by day</option>
-            </Select>
+              onChange={setGrain}
+              options={[
+                { value: "monthly", label: "Month by month" },
+                { value: "daily", label: "Day by day" },
+              ]}
+            />
             {grain === "monthly" ? (
               <Select label="Year" value={String(year)} onChange={(event) => setYear(Number(event.target.value))}>
                 {YEARS.map((option) => (
@@ -110,7 +112,7 @@ export default function PayoutPage() {
           </CardTitle>
           {/* The payout is a percentage of approved deposits, so both numbers
               belong together — the rate is what makes the payout checkable. */}
-          <p className="tabular text-3xl font-semibold text-accent">{compactInr(summary?.payout)}</p>
+          <p className="tabular text-2xl font-semibold break-words text-accent sm:text-3xl">{compactInr(summary?.payout)}</p>
           <p className="mt-1 text-xs text-muted">
             on {money(summary?.approved_total)} approved across {summary?.deposit_count ?? 0} deposits
           </p>

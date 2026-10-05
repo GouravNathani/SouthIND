@@ -14,7 +14,7 @@ function Detail({ label, value }: { label: string; value?: string | null }) {
   return (
     <p className="min-w-0 text-sm">
       <span className="text-muted">{label} </span>
-      <span className="tabular break-all text-text">{value}</span>
+      <span className="tabular [overflow-wrap:anywhere] text-text">{value}</span>
     </p>
   );
 }
@@ -84,7 +84,7 @@ function AccountTile({
           />
         ) : null}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-text">{account.name}</p>
+          <p className="line-clamp-2 text-sm font-semibold text-text">{account.name}</p>
           <p className="truncate text-xs text-muted">{account.holder_name}</p>
         </div>
         <Badge tone="accent">{(account.type ?? "").toUpperCase()}</Badge>

@@ -5,7 +5,8 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge, { statusTone } from "@/components/ui/Badge";
 import DataTable, { type Column } from "@/components/ui/DataTable";
-import { Input, Select } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Field";
+import { IconChevronDown } from "@/components/icons";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import {
@@ -145,32 +146,37 @@ export default function UsersPage() {
             // Moving a user re-homes their whole history, so the target is an
             // explicit pick rather than a cycle-through-branches button.
             <>
-              <select
-                aria-label="Move to branch"
-                defaultValue=""
-                onChange={(event) => {
-                  if (event.target.value) void move(row, Number(event.target.value));
-                }}
-                className="h-9 max-w-[10rem] min-w-0 rounded-full border border-border bg-surface-2 px-3 text-xs text-text"
-              >
-                <option value="">Move to…</option>
-                {branches
-                  .filter((entry) => entry.id !== row.branch_id)
-                  .map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.name}
-                    </option>
-                  ))}
-              </select>
+              <span className="relative inline-block max-w-[11rem] min-w-0">
+                <select
+                  aria-label="Move to branch"
+                  defaultValue=""
+                  onChange={(event) => {
+                    if (event.target.value) void move(row, Number(event.target.value));
+                  }}
+                  className="h-9 w-full min-w-0 cursor-pointer appearance-none truncate rounded-full border border-border bg-surface-2 pr-8 pl-3 text-xs text-text focus:border-accent focus:outline-none"
+                >
+                  <option value="">Move to…</option>
+                  {branches
+                    .filter((entry) => entry.id !== row.branch_id)
+                    .map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.name}
+                      </option>
+                    ))}
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-muted">
+                  <IconChevronDown size={14} />
+                </span>
+              </span>
               <Button size="sm" variant="ghost" onClick={() => setMovingId(null)}>
                 Cancel
               </Button>
             </>
-          ) : (
+          ) : branches.length > 1 ? (
             <Button size="sm" variant="ghost" loading={isMoving} onClick={() => setMovingId(row.id)}>
               Move
             </Button>
-          )}
+          ) : null}
           <Button size="sm" variant="ghost" loading={isResetting} onClick={() => void regenerate(row)}>
             New MPIN
           </Button>
@@ -201,9 +207,16 @@ export default function UsersPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            <Select label="Branch" value="header" disabled onChange={() => undefined}>
-              <option value="header">{branch?.name ?? "All branches"} — set in the header</option>
-            </Select>
+            {/* Read-only: the branch is chosen once, in the header, for the whole panel. */}
+            <div className="min-w-0">
+              <span className="mb-1.5 block text-xs font-medium text-muted">Branch</span>
+              <p className="flex h-11 min-w-0 items-center rounded-md border border-dashed border-border px-3.5 text-sm text-text">
+                <span className="truncate">{branch?.name ?? "All branches"}</span>
+              </p>
+              {branches.length > 1 ? (
+                <span className="mt-1.5 block text-xs text-faint">Switch it from the branch picker at the top.</span>
+              ) : null}
+            </div>
           </div>
         </Card>
 

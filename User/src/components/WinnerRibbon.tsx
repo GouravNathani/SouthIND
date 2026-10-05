@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { useGetWinnerStreakQuery } from "@/services/api";
 import { IconTrophy } from "@/components/icons";
+import { amountText } from "@/utils/format";
 
 /** Seconds each winner takes to cross, so the speed reads the same at any count. */
 const SECONDS_PER_ITEM = 7;
@@ -32,7 +33,7 @@ export default function WinnerRibbon() {
           className="flex shrink-0 items-baseline gap-2 text-xs whitespace-nowrap"
         >
           <span className="font-semibold text-text">{item.name}</span>
-          {item.amount ? <span className="tabular text-accent">{item.amount}</span> : null}
+          {item.amount ? <span className="tabular text-accent">{amountText(item.amount)}</span> : null}
           <span className="text-faint">{item.title}</span>
         </span>
       ))}

@@ -38,7 +38,7 @@ export default function CopyRow({ label, value }: { label: string; value?: strin
     <div className="flex min-w-0 items-center gap-3 border-b border-border py-2.5 last:border-0">
       <div className="min-w-0 flex-1">
         <p className="text-[11px] tracking-wide text-muted uppercase">{label}</p>
-        <p className="tabular text-sm break-all text-text">{value}</p>
+        <p className="tabular text-sm [overflow-wrap:anywhere] text-text">{value}</p>
       </div>
       <button
         type="button"

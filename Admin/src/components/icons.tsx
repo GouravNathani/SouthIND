@@ -75,6 +75,10 @@ export const IconBack = ({ size = 20 }: P) => (
   <svg {...base(size)}><path d="M19 12H5" /><path d="m11 6-6 6 6 6" /></svg>
 );
 
+export const IconChevronDown = ({ size = 20 }: P) => (
+  <svg {...base(size)}><path d="m6 9 6 6 6-6" /></svg>
+);
+
 export const IconClose = ({ size = 18 }: P) => (
   <svg {...base(size)}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
 );

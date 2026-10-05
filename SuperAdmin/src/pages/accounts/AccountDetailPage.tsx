@@ -128,17 +128,16 @@ export default function AccountDetailPage() {
             confirmingDelete ? (
               <span className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted">Delete this account?</span>
-                <Button size="sm" variant="danger" loading={isDeleting} onClick={() => void remove()}>
+                <Button variant="danger" loading={isDeleting} onClick={() => void remove()}>
                   Yes, delete
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
+                <Button variant="ghost" onClick={() => setConfirmingDelete(false)}>
                   Cancel
                 </Button>
               </span>
             ) : (
               <Button
                 type="button"
-                size="sm"
                 variant="ghost"
                 onClick={() => setConfirmingDelete(true)}
               >

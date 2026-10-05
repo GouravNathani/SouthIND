@@ -77,7 +77,7 @@ export default function DashboardPage() {
       subtitle={branch ? branch.name : `${branches.data?.length ?? 0} branches`}
     >
       <div className="space-y-4">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex min-w-0 flex-wrap gap-2">
           {TIMEFRAMES.map((option) => (
             <button
               key={option.id}
@@ -148,8 +148,10 @@ export default function DashboardPage() {
                         {entry.domain ? ` · ${entry.domain}` : ""}
                       </p>
                     </div>
-                    <span className="tabular shrink-0 text-xs text-muted">
-                      {entry.users_count ?? 0} users · {entry.admins_count ?? 0} admins
+                    {/* Stacked, so the counts take ~60px instead of eating the branch name. */}
+                    <span className="tabular shrink-0 text-right text-xs leading-snug text-muted">
+                      <span className="block">{entry.users_count ?? 0} users</span>
+                      <span className="block">{entry.admins_count ?? 0} admins</span>
                     </span>
                     <Badge tone={entry.is_active === false ? "neg" : "pos"}>
                       {entry.is_active === false ? "Off" : "Live"}
@@ -206,7 +208,7 @@ function SummaryCard({
   return (
     <Card>
       <CardTitle hint={`${summary?.count ?? 0} requests`}>{title}</CardTitle>
-      <p className="tabular text-3xl font-semibold text-accent">{compactInr(summary?.approvedTotal)}</p>
+      <p className="tabular text-2xl font-semibold break-words text-accent sm:text-3xl">{compactInr(summary?.approvedTotal)}</p>
 
       <div className="mt-4 grid grid-cols-2 gap-4">
         <Stat label={`Pending · ${pendingCount}`} value={money(pendingTotal)} />

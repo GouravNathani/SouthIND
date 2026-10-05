@@ -5,7 +5,7 @@ import Card, { CardTitle } from "@/components/ui/Card";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { useGetWinnerStreakQuery, type WinnerStreakWinner } from "@/services/api";
 import { getApiErrorMessage } from "@/utils/apiError";
-import { dateTime } from "@/utils/format";
+import { amountText, dateTime } from "@/utils/format";
 
 const PERIODS = ["daily", "weekly", "monthly"] as const;
 type Period = (typeof PERIODS)[number];
@@ -104,18 +104,19 @@ function WinnerList({
                 <p className="truncate text-xs text-faint">{entry.play_id}</p>
               ) : null}
             </div>
-            <div className="shrink-0 text-right">
+            {/* Capped so a long reward label cannot squeeze the name to a few letters. */}
+            <div className="max-w-[48%] min-w-0 shrink-0 text-right">
               {entry.amount ? (
                 <p
                   className="tabular text-sm font-semibold"
                   style={{ color: tone === "pos" ? "var(--pos)" : "var(--neg)" }}
                 >
-                  {entry.amount}
+                  {amountText(entry.amount)}
                 </p>
               ) : null}
               {entry.reward || entry.reward_label ? (
                 <p className="truncate text-xs text-accent-2">
-                  {[entry.reward, entry.reward_label].filter(Boolean).join(" · ")}
+                  {entry.reward_label || (entry.reward ? amountText(entry.reward) : "")}
                 </p>
               ) : null}
             </div>

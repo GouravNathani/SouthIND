@@ -45,7 +45,15 @@ export function BranchProvider({ children }: { children: ReactNode }) {
   // A remembered branch that has since been deleted would silently scope every
   // query to nothing — fall back to "all" rather than showing empty lists.
   useEffect(() => {
-    if (branchId === null || !branches.length) return;
+    if (!branches.length) return;
+    // With a single branch "all" and that branch are the same data, and the
+    // header hides the picker — so pick it, or the per-branch pages (referral,
+    // winner streak) would ask for a choice nobody can make.
+    if (branches.length === 1) {
+      if (branchId !== branches[0].id) setBranchIdState(branches[0].id);
+      return;
+    }
+    if (branchId === null) return;
     if (!branches.some((branch) => branch.id === branchId)) setBranchIdState(null);
   }, [branchId, branches]);
 

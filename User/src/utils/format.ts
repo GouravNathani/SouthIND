@@ -7,6 +7,14 @@ export const inr = (value: number | string | null | undefined): string => {
 
 export const money = (value: number | string | null | undefined) => `₹${inr(value)}`;
 
+/** Winner-streak amounts arrive as plain digit strings ("184500", "-75300"); show them
+ *  like every other amount in the app. Anything else the admin typed stays as written. */
+export const amountText = (raw: string) => {
+  const value = raw.trim();
+  if (!/^-?\d+(\.\d+)?$/.test(value)) return value;
+  return value.startsWith("-") ? `-${money(value.slice(1))}` : money(value);
+};
+
 export const toNumber = (value: unknown): number => {
   const parsed = typeof value === "string" ? Number(value) : typeof value === "number" ? value : NaN;
   return Number.isFinite(parsed) ? parsed : 0;

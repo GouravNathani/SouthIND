@@ -7,7 +7,8 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import CopyRow from "@/components/CopyRow";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { Input, Select } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Field";
+import Segmented from "@/components/ui/Segmented";
 import Badge, { statusTone } from "@/components/ui/Badge";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import {
@@ -220,7 +221,9 @@ function AgentSection() {
                     {payout.method.toUpperCase()} · {dateTime(payout.created_at)}
                   </p>
                 </div>
-                <Badge tone={statusTone(payout.status)}>{payout.status}</Badge>
+                <Badge tone={statusTone(payout.status)}>
+                  {t(`history.filter.${payout.status}`, { defaultValue: payout.status })}
+                </Badge>
               </li>
             ))}
           </ul>
@@ -289,15 +292,16 @@ function PayoutCard({ minimum }: { minimum: number }) {
           required
         />
 
-        <Select
+        <Segmented
           label={t("account.method")}
           value={method}
-          onChange={(event) => setMethod(event.target.value as typeof method)}
-        >
-          <option value="upi">UPI</option>
-          <option value="bank">{t("account.bank")}</option>
-          <option value="play">{t("account.playCredit")}</option>
-        </Select>
+          onChange={setMethod}
+          options={[
+            { value: "upi", label: "UPI" },
+            { value: "bank", label: t("account.bank") },
+            { value: "play", label: t("account.playCredit") },
+          ]}
+        />
 
         {method === "upi" ? (
           <Input

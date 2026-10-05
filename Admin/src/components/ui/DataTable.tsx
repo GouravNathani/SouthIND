@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { EmptyState, Skeleton } from "@/components/ui/Feedback";
 
 export type Column<T> = {
+  /** "actions" is special: on a phone it renders as a full-width footer row of the
+   *  card rather than a half-width cell, where its buttons would be clipped. */
   key: string;
   header: string;
   render: (row: T) => ReactNode;
@@ -9,6 +11,8 @@ export type Column<T> = {
   secondary?: boolean;
   align?: "left" | "right";
 };
+
+const isActions = <T,>(column: Column<T>) => column.key === "actions";
 
 /**
  * One dataset, two presentations. A real <table> on lg+ (inside its own
@@ -90,7 +94,14 @@ export default function DataTable<T>({
                       column.align === "right" ? "text-right" : "text-left",
                     ].join(" ")}
                   >
-                    {column.render(row)}
+                    {isActions(column) ? (
+                      column.render(row)
+                    ) : (
+                      // An auto-layout table sizes a column to its widest unbroken
+                      // text, so a long UPI id or UTR would widen the whole table.
+                      // The cap gives `truncate` inside a cell a width to work with.
+                      <div className="max-w-[20rem] min-w-0 break-words">{column.render(row)}</div>
+                    )}
                   </td>
                 ))}
               </tr>
@@ -103,6 +114,12 @@ export default function DataTable<T>({
       <ul className="space-y-2 lg:hidden">
         {rows.map((row) => {
           const [lead, ...rest] = columns;
+          const fields = rest.filter((column) => !column.secondary && !isActions(column));
+          // A row with nothing to act on (e.g. an already-decided payout) gets no footer.
+          const actions = rest
+            .filter(isActions)
+            .map((column) => ({ key: column.key, node: column.render(row) }))
+            .filter((entry) => entry.node !== null && entry.node !== undefined && entry.node !== false);
           return (
             <li key={keyOf(row)}>
               <div
@@ -119,10 +136,9 @@ export default function DataTable<T>({
                 className="min-w-0 rounded-lg border border-border bg-surface p-3.5"
               >
                 <div className="min-w-0 text-sm font-semibold text-text">{lead?.render(row)}</div>
-                <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
-                  {rest
-                    .filter((column) => !column.secondary)
-                    .map((column) => (
+                {fields.length ? (
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    {fields.map((column) => (
                       <div key={column.key} className="min-w-0">
                         <dt className="truncate text-[10.5px] tracking-wide text-faint uppercase">
                           {column.header}
@@ -130,7 +146,13 @@ export default function DataTable<T>({
                         <dd className="min-w-0 truncate text-sm text-text">{column.render(row)}</dd>
                       </div>
                     ))}
-                </dl>
+                  </dl>
+                ) : null}
+                {actions.map((entry) => (
+                  <div key={entry.key} className="mt-3 min-w-0 border-t border-border pt-3">
+                    {entry.node}
+                  </div>
+                ))}
               </div>
             </li>
           );

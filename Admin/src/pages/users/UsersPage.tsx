@@ -7,7 +7,8 @@ import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge, { statusTone } from "@/components/ui/Badge";
 import DataTable, { type Column } from "@/components/ui/DataTable";
-import { Input, Select } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Field";
+import Segmented from "@/components/ui/Segmented";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { IconPlus } from "@/components/icons";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -218,15 +219,16 @@ export default function UsersPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            <Select
+            <Segmented
               label="Status"
               value={status}
-              onChange={(event) => setStatus(event.target.value)}
-            >
-              <option value="">All statuses</option>
-              <option value="active">Active</option>
-              <option value="banned">Banned</option>
-            </Select>
+              onChange={setStatus}
+              options={[
+                { value: "", label: "All" },
+                { value: "active", label: "Active" },
+                { value: "banned", label: "Banned" },
+              ]}
+            />
           </div>
         </Card>
 

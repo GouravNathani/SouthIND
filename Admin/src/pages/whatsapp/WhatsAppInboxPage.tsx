@@ -4,7 +4,7 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { Input, Select } from "@/components/ui/Field";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
-import { IconSend } from "@/components/icons";
+import { IconChevronDown, IconSend } from "@/components/icons";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import {
   useGetWhatsAppAccountsQuery,
@@ -208,8 +208,11 @@ function Thread({ conversationId, accountId }: { conversationId: number; account
 
   if (isLoading && !data) return <Skeleton className="h-[60dvh] w-full" />;
 
+  // A fixed height (the viewport minus header and page padding), not a minimum:
+  // only then does the message list scroll inside the card and keep the header
+  // and composer in view.
   return (
-    <Card className="flex min-h-[60dvh] flex-col" padded={false}>
+    <Card className="flex h-[calc(100dvh-11rem)] min-h-[24rem] flex-col lg:h-[calc(100dvh-7.5rem)]" padded={false}>
       <div className="flex min-w-0 items-center gap-3 border-b border-border p-3">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-text">
@@ -247,18 +250,23 @@ function Thread({ conversationId, accountId }: { conversationId: number; account
             className="h-11 min-w-0 flex-1 rounded-full border border-border bg-surface-2 px-4 text-sm text-text placeholder:text-faint focus:border-accent focus:outline-none"
           />
         ) : (
-          <select
-            value={templateName}
-            onChange={(event) => setTemplateName(event.target.value)}
-            className="h-11 min-w-0 flex-1 rounded-full border border-border bg-surface-2 px-4 text-sm text-text focus:border-accent focus:outline-none"
-          >
-            <option value="">Choose an approved template…</option>
-            {(templates.data ?? []).map((template) => (
-              <option key={template.id} value={template.name}>
-                {template.name} ({template.language})
-              </option>
-            ))}
-          </select>
+          <span className="relative min-w-0 flex-1">
+            <select
+              value={templateName}
+              onChange={(event) => setTemplateName(event.target.value)}
+              className="h-11 w-full min-w-0 cursor-pointer appearance-none truncate rounded-full border border-border bg-surface-2 pr-10 pl-4 text-sm text-text focus:border-accent focus:outline-none"
+            >
+              <option value="">Choose an approved template…</option>
+              {(templates.data ?? []).map((template) => (
+                <option key={template.id} value={template.name}>
+                  {template.name} ({template.language})
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-muted">
+              <IconChevronDown size={16} />
+            </span>
+          </span>
         )}
 
         <button
@@ -290,7 +298,7 @@ function Bubble({ message }: { message: WhatsAppMessage }) {
           src={message.media_url}
           alt=""
           loading="lazy"
-          className="mb-1.5 max-h-64 w-full rounded object-contain"
+          className="mb-1.5 max-h-64 w-full rounded-sm object-contain"
         />
       ) : null}
       {message.template_name ? (

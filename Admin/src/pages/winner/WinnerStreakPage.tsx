@@ -108,7 +108,7 @@ export default function WinnerStreakPage() {
           <span className="flex items-center gap-2">
             <Link
               to="/winner-streak/history"
-              className="inline-flex h-9 shrink-0 items-center rounded-md border border-border px-3 text-[13px] font-semibold text-muted"
+              className="inline-flex h-9 shrink-0 items-center rounded-full border border-border bg-surface px-3.5 text-[13px] font-semibold text-text transition-colors hover:border-border-strong"
             >
               History
             </Link>
@@ -120,7 +120,7 @@ export default function WinnerStreakPage() {
       }
     >
       <div className="space-y-4">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex min-w-0 flex-wrap gap-2">
           {PERIODS.map((option) => (
             <button
               key={option}

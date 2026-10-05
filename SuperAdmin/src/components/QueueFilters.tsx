@@ -1,10 +1,18 @@
 import type { ReactNode } from "react";
 import Card from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Field";
+import Segmented from "@/components/ui/Segmented";
 import { TIMEFRAMES, type TimeframeId } from "@/utils/timeframe";
 
 export const STATUS_OPTIONS = ["", "pending", "approved", "rejected"] as const;
 export type StatusFilter = (typeof STATUS_OPTIONS)[number];
+
+const STATUS_CHOICES = [
+  { value: "", label: "All" },
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+] as const satisfies readonly { value: StatusFilter; label: string }[];
 
 export type QueueFilterState = {
   search: string;
@@ -36,6 +44,7 @@ export default function QueueFilters({
 
   return (
     <Card>
+      {/* sm: search | period, status underneath; lg: one row with status widest. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Input
           label="Search"
@@ -43,16 +52,6 @@ export default function QueueFilters({
           value={value.search}
           onChange={(event) => patch({ search: event.target.value })}
         />
-        <Select
-          label="Status"
-          value={value.status}
-          onChange={(event) => patch({ status: event.target.value as StatusFilter })}
-        >
-          <option value="">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </Select>
         <Select
           label="Period"
           value={value.timeframe}
@@ -64,7 +63,14 @@ export default function QueueFilters({
             </option>
           ))}
         </Select>
-        <div className="flex items-end">{right}</div>
+        <Segmented
+          label="Status"
+          value={value.status}
+          onChange={(status) => patch({ status })}
+          options={STATUS_CHOICES}
+          className="sm:col-span-2"
+        />
+        {right ? <div className="flex items-end sm:col-span-2 lg:col-span-4">{right}</div> : null}
       </div>
 
       {value.timeframe === "range" ? (

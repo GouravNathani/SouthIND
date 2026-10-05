@@ -71,7 +71,7 @@ export default function DashboardPage() {
   return (
     <AdminShell title="Dashboard" subtitle={adminName}>
       <div className="space-y-4">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex min-w-0 flex-wrap gap-2">
           {TIMEFRAMES.map((option) => (
             <button
               key={option.id}
@@ -170,7 +170,7 @@ function SummaryCard({
   return (
     <Card>
       <CardTitle hint={`${summary?.count ?? 0} requests`}>{title}</CardTitle>
-      <p className="tabular text-3xl font-semibold text-accent">{money(summary?.approvedTotal)}</p>
+      <p className="tabular text-2xl font-semibold break-words text-accent sm:text-3xl">{money(summary?.approvedTotal)}</p>
 
       <div className="mt-4 grid grid-cols-2 gap-4">
         <Stat label="Pending" value={money(pendingTotal)} hint={`${pendingCount}`} />

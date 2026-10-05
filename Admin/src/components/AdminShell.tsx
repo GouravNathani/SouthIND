@@ -221,7 +221,7 @@ export default function AdminShell({
           />
           <nav
             aria-label="Main"
-            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border bg-bg-elev p-3 shadow-lg"
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border bg-bg-elev p-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-lg"
           >
             <div className="flex items-start justify-between gap-2">
               {brand}

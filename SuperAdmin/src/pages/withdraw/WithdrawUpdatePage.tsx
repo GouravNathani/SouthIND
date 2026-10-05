@@ -87,7 +87,7 @@ export default function WithdrawUpdatePage() {
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs text-muted">Amount</p>
-              <p className="tabular text-3xl font-semibold text-accent">{money(withdrawal.amount)}</p>
+              <p className="tabular text-2xl font-semibold break-words text-accent sm:text-3xl">{money(withdrawal.amount)}</p>
             </div>
             <Badge tone={statusTone(withdrawal.status)}>{withdrawal.status}</Badge>
           </div>

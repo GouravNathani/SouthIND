@@ -77,7 +77,7 @@ export default function DashboardPage() {
               </div>
               <Link
                 to="/account"
-                className="ml-auto shrink-0 text-[13px] font-semibold text-accent"
+                className="ml-auto shrink-0 self-end pb-1 text-[13px] font-semibold text-accent"
               >
                 {t("common.viewAll")}
               </Link>
@@ -118,7 +118,8 @@ function ActionTile({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold text-text">{label}</span>
-        {offer ? <span className="block truncate text-xs text-accent-2">{offer}</span> : null}
+        {/* Two lines, not one: the offer is the reason to tap, so it must not be cut mid-sentence. */}
+        {offer ? <span className="mt-0.5 line-clamp-2 text-xs text-accent-2">{offer}</span> : null}
       </span>
     </button>
   );
