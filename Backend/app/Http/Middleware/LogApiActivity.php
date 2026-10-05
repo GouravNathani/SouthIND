@@ -153,10 +153,15 @@ class LogApiActivity
             'api_key',
             'api_secret',
             'access_token_encrypted',
+            // Web-push subscription secret (keys.auth).
+            'auth',
         ];
 
         foreach ($payload as $key => $value) {
-            if (in_array($key, $hiddenKeys, true)) {
+            // Exact names above, plus any variant of them (old_mpin, old_password,
+            // hub_verify_token, webhook_verify_token, ...).
+            if (in_array($key, $hiddenKeys, true)
+                || (is_string($key) && preg_match('/password|mpin|token|secret/i', $key))) {
                 $payload[$key] = '********';
                 continue;
             }

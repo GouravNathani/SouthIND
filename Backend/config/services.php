@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        // Meta Graph API version used for WhatsApp Cloud API calls.
+        'api_version' => env('WHATSAPP_API_VERSION', 'v21.0'),
+        'base_url' => env('WHATSAPP_BASE_URL', 'https://graph.facebook.com'),
+    ],
+
 ];

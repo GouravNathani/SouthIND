@@ -34,10 +34,15 @@ Artisan::command('wallet:daily-payout {--date= : Bill only this day (YYYY-MM-DD)
     return \Illuminate\Console\Command::SUCCESS;
 })->purpose('Bill each completed day of message charges to the wallet as a single deduction');
 
+// withoutOverlapping(N): N minutes is how long a run's lock outlives a run the
+// host killed (CPU/time limits on shared hosting). The default is 24 h, which
+// silently skipped that command for a whole day. N comfortably exceeds each
+// command's longest normal run, so a slow run is still not doubled.
+
 // 03:00 — bill yesterday, and retry anything still owed from earlier days.
 Schedule::command('wallet:daily-payout')
     ->dailyAt('03:00')
-    ->withoutOverlapping();
+    ->withoutOverlapping(120);
 
 Artisan::command('wallet:settle {--limit=60 : Max days to retry}', function (): int {
     // Manual "settle now" (also used by the SuperAdmin button): same run as the
@@ -60,7 +65,7 @@ Artisan::command('wallet:sync-rates', function (): int {
 
 Schedule::command('wallet:sync-rates')
     ->hourly()
-    ->withoutOverlapping();
+    ->withoutOverlapping(60);
 
 Artisan::command('winner:streak-tick', function (): int {
     // Auto-reset for the Winner Streak boards.
@@ -86,7 +91,7 @@ Artisan::command('winner:streak-tick', function (): int {
 // within minutes of the boundary rather than at the next hour.
 Schedule::command('winner:streak-tick')
     ->everyFiveMinutes()
-    ->withoutOverlapping();
+    ->withoutOverlapping(15);
 
 Artisan::command('referral:tick {--limit=500 : Max entries to release per run}', function (): int {
     // Releases agent commission whose holding window has elapsed.
@@ -113,7 +118,7 @@ Artisan::command('referral:tick {--limit=500 : Max entries to release per run}',
 // inside the resolution anyone can perceive.
 Schedule::command('referral:tick')
     ->everyTenMinutes()
-    ->withoutOverlapping();
+    ->withoutOverlapping(30);
 
 Artisan::command('referral:rebuild {--branch= : Only this branch}', function (): int {
     // Rebuild every agent's cached balances and team stats from the ledger.
@@ -178,7 +183,7 @@ Artisan::command('logs:prune {--days= : Keep log files for this many days}', fun
 
 Schedule::command('logs:prune')
     ->dailyAt('02:15')
-    ->withoutOverlapping();
+    ->withoutOverlapping(120);
 
 Artisan::command('deposits:cleanup-receipts {--days=7 : Keep receipts for this many days}', function (): int {
     // Deposit receipts are kept for a fixed window only. Older ones are deleted
@@ -269,7 +274,7 @@ Artisan::command('deposits:cleanup-receipts {--days=7 : Keep receipts for this m
 
 Schedule::command('deposits:cleanup-receipts --days=7')
     ->dailyAt('01:00')
-    ->withoutOverlapping();
+    ->withoutOverlapping(120);
 
 Artisan::command('cache:prune-files', function (): int {
     // Laravel's file cache driver never garbage-collects: an expired entry is
@@ -334,7 +339,7 @@ Artisan::command('cache:prune-files', function (): int {
 
 Schedule::command('cache:prune-files')
     ->dailyAt('02:30')
-    ->withoutOverlapping();
+    ->withoutOverlapping(120);
 
 Artisan::command('tokens:cleanup', function (): int {
     $deleted = \Laravel\Sanctum\PersonalAccessToken::query()
@@ -349,7 +354,7 @@ Artisan::command('tokens:cleanup', function (): int {
 
 Schedule::command('tokens:cleanup')
     ->hourly()
-    ->withoutOverlapping();
+    ->withoutOverlapping(60);
 
 Artisan::command('tokens:purge-all', function (): int {
     // Hard reset: remove ALL access tokens (valid ones included) and every
@@ -371,7 +376,7 @@ Artisan::command('tokens:purge-all', function (): int {
 // Every night at 00:00 (app timezone) — hard reset, everyone is logged out.
 Schedule::command('tokens:purge-all')
     ->dailyAt('00:00')
-    ->withoutOverlapping();
+    ->withoutOverlapping(120);
 
 // Shared hosting has no always-on worker, so the one-minute scheduler cron
 // drains the queue instead: --stop-when-empty keeps each run short, --max-time
@@ -379,4 +384,4 @@ Schedule::command('tokens:purge-all')
 // from stacking up.
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
     ->everyMinute()
-    ->withoutOverlapping();
+    ->withoutOverlapping(5);

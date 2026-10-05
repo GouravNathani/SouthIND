@@ -13,7 +13,7 @@ use Illuminate\Database\Seeder;
  * It creates the bare minimum an empty install needs to be usable — a super
  * admin, a first branch, its admin, and the singleton settings row — and nothing
  * else. No demo users, no fake money. Everything comes from .env, and every
- * write is an updateOrCreate keyed on a natural identifier, so re-running it is
+ * write is a firstOrCreate keyed on a natural identifier, so re-running it is
  * a no-op rather than a duplicate.
  *
  *   php artisan db:seed --class=ProductionSeeder
@@ -33,7 +33,9 @@ class ProductionSeeder extends Seeder
             return;
         }
 
-        $super = Admin::updateOrCreate(
+        // firstOrCreate, not updateOrCreate: a re-run must never put the .env
+        // bootstrap passwords back over the ones chosen at first login.
+        $super = Admin::firstOrCreate(
             ['phone' => $superPhone],
             [
                 'name' => (string) config('auth.super_admin.name', 'Super Admin'),
@@ -48,10 +50,12 @@ class ProductionSeeder extends Seeder
             ],
         );
 
-        $branch = Branch::updateOrCreate(
-            ['code' => (string) config('auth.default_branch.code', 'MAIN')],
+        // The config keys always exist (null when the env is unset), so a
+        // config() default would never apply: fall back explicitly.
+        $branch = Branch::firstOrCreate(
+            ['code' => (string) (config('auth.default_branch.code') ?: 'MAIN')],
             [
-                'name' => (string) config('auth.default_branch.name', 'Main Branch'),
+                'name' => (string) (config('auth.default_branch.name') ?: 'Main Branch'),
                 'domain' => config('auth.default_branch.domain') ?: null,
                 'is_active' => true,
                 'created_by' => $super->id,
@@ -61,8 +65,9 @@ class ProductionSeeder extends Seeder
         $adminPhone = (string) config('auth.default_admin.phone');
         $adminPassword = (string) config('auth.default_admin.password');
 
-        if ($adminPhone !== '' && $adminPassword !== '') {
-            Admin::updateOrCreate(
+        // Never the super admin's phone: that would demote the super admin.
+        if ($adminPhone !== '' && $adminPassword !== '' && $adminPhone !== $superPhone) {
+            Admin::firstOrCreate(
                 ['phone' => $adminPhone],
                 [
                     'name' => (string) config('auth.default_admin.name', 'Admin'),

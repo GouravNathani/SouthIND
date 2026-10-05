@@ -68,7 +68,7 @@ Route::middleware('wallet-hmac')->group(function () {
 // Admin/Super/Staff panels are intentionally NOT wrapped and stay available.
 Route::middleware('user-panel-open')->group(function () {
     Route::prefix('auth')->group(function () {
-        Route::post('mpin-login', [UserAuthController::class, 'loginWithMpin']);
+        Route::post('mpin-login', [UserAuthController::class, 'loginWithMpin'])->middleware('throttle:login');
         Route::post('check-branch', [UserAuthController::class, 'checkBranch']);
 
         Route::middleware('auth:sanctum')->group(function () {
@@ -126,7 +126,7 @@ Route::get('whatsapp/webhook', [WhatsAppWebhookController::class, 'verify']);
 Route::post('whatsapp/webhook', [WhatsAppWebhookController::class, 'receive']);
 
 Route::prefix('admin')->group(function () {
-    Route::post('login', [AdminAuthController::class, 'login']);
+    Route::post('login', [AdminAuthController::class, 'login'])->middleware('throttle:login');
 
     Route::middleware(['auth:sanctum', 'admin'])->group(function () {
         Route::post('logout', [AdminAuthController::class, 'logout']);
@@ -222,7 +222,7 @@ Route::prefix('admin')->group(function () {
 });
 
 Route::prefix('super')->group(function () {
-    Route::post('login', [SuperAuthController::class, 'login']);
+    Route::post('login', [SuperAuthController::class, 'login'])->middleware('throttle:login');
     Route::middleware(['auth:sanctum', 'super-admin'])->group(function () {
         Route::get('me', [AdminAuthController::class, 'me']);
         Route::post('logout', [SuperAuthController::class, 'logout']);
@@ -321,7 +321,7 @@ Route::prefix('super')->group(function () {
 });
 
 Route::prefix('staff')->group(function () {
-    Route::post('login', [StaffAuthController::class, 'login']);
+    Route::post('login', [StaffAuthController::class, 'login'])->middleware('throttle:login');
 
     Route::middleware(['auth:sanctum', 'staff'])->group(function () {
         Route::post('logout', [StaffAuthController::class, 'logout']);

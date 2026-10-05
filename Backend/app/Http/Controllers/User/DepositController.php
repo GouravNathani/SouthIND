@@ -66,7 +66,17 @@ class DepositController extends Controller
             ->active()
             ->forUse('deposit')
             ->when($branchId, fn ($query) => $query->where('branch_id', $branchId))
-            ->findOrFail($data['account_id']);
+            ->find($data['account_id']);
+
+        // The account passed validation because the row exists, but it has since
+        // been deactivated or switched away from deposits. The customer has
+        // normally already paid by this point, so tell them what to do instead
+        // of leaking findOrFail's "No query results for model [Account] N".
+        if (!$account) {
+            throw ValidationException::withMessages([
+                'account_id' => ['This payment account is no longer accepting deposits. Please go back and choose another account, and contact support if you have already paid.'],
+            ]);
+        }
 
         $lockedPlayId = trim((string) ($user?->play_id ?? ''));
         $incomingPlayId = trim((string) ($data['play_id'] ?? ''));
