@@ -71,7 +71,9 @@ export default function Segmented<T extends string>({
               onClick={() => onChange(option.value)}
               onKeyDown={(event) => onKeyDown(event, index)}
               className={[
-                "min-w-0 flex-1 truncate rounded-sm px-1.5 text-[13px] font-medium whitespace-nowrap",
+                // Content-sized on phones so "Approved" is never cut to "Approv…" beside a
+                // short "All"; equal widths from sm up, where there is room for both.
+                "min-w-0 flex-auto truncate rounded-sm px-2 text-[13px] font-medium whitespace-nowrap sm:flex-1",
                 "transition-colors duration-150 focus-visible:outline-offset-0 disabled:cursor-not-allowed",
                 active ? "bg-accent-soft text-accent shadow-[inset_0_0_0_1px_var(--accent-line)]" : "text-muted hover:text-text",
               ].join(" ")}
