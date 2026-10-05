@@ -1,0 +1,21 @@
+Options -MultiViews
+RewriteEngine On
+RewriteBase /
+
+# Real files and folders are served as they are.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Everything else is the SPA. Routing is hash-based, but path links such as
+# push-notification targets (/deposits) must still land on the app, not a 404.
+RewriteRule . /index.html [L]
+
+# The app shell and service worker are revalidated on every load; otherwise a
+# browser or the CDN keeps serving the previous build after a deploy. Hashed
+# files under /assets never change, so they may be cached for good.
+<IfModule mod_headers.c>
+  <FilesMatch "^(index\.html|sw\.js|registerSW\.js|manifest\.webmanifest|latest\.txt|version\.json)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

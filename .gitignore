@@ -6,6 +6,8 @@ dev-dist/
 .env
 .env.*
 !.env.example
+# Production build settings hold only public URLs and the public VAPID key.
+!.env.production
 /Backend/vendor/
 /Backend/storage/*.key
 /Backend/storage/logs/*
@@ -19,3 +21,6 @@ dev-dist/
 /User/.env.local
 /Admin/.env.local
 /SuperAdmin/.env.local
+/User/.env.development.local
+/Admin/.env.development.local
+/SuperAdmin/.env.development.local
