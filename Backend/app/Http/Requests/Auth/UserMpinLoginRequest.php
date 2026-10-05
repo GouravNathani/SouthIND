@@ -13,9 +13,11 @@ class UserMpinLoginRequest extends FormRequest
 
     public function rules(): array
     {
+        // Players sign in with their phone number only. The old User ID
+        // (unique_number) login is gone by owner decision — in the app AND here,
+        // so the API cannot be used to sign in by User ID either.
         return [
-            'user_id' => ['nullable', 'string', 'max:32', 'required_without:phone'],
-            'phone' => ['nullable', 'string', 'max:32', 'required_without:user_id'],
+            'phone' => ['required', 'string', 'max:32'],
             'branch_code' => ['nullable', 'string', 'max:40'],
             'mpin' => ['required', 'digits:6'],
         ];

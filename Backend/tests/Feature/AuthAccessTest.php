@@ -42,6 +42,18 @@ class AuthAccessTest extends TestCase
         ])->assertUnauthorized();
     }
 
+    public function test_a_user_cannot_log_in_by_user_id_only_by_phone(): void
+    {
+        $ctx = $this->makeBranch();
+
+        $this->postJson('/api/auth/mpin-login', [
+            'user_id' => $ctx['user']->unique_number,
+            'mpin' => '123456',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('phone');
+    }
+
     public function test_admin_and_super_admin_log_in(): void
     {
         $ctx = $this->makeBranch();

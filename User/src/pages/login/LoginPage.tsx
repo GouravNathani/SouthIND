@@ -60,8 +60,6 @@ export default function LoginPage() {
   const { mode, toggleMode } = useTheme();
 
   const [phone, setPhone] = useState("");
-  const [userId, setUserId] = useState("");
-  const [loginMode, setLoginMode] = useState<"phone" | "userId">("phone");
   const [branchCode, setBranchCode] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +77,7 @@ export default function LoginPage() {
   // A phone number can exist in more than one branch; when it does the backend
   // asks for a branch code, so the field only appears when it is actually needed.
   useEffect(() => {
-    if (loginMode !== "phone" || phone.length !== 10) {
+    if (phone.length !== 10) {
       setRequiresBranchCode(false);
       setBranchCode("");
       return;
@@ -104,7 +102,7 @@ export default function LoginPage() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [checkBranch, loginMode, phone]);
+  }, [checkBranch, phone]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -113,30 +111,21 @@ export default function LoginPage() {
     const trimmedPin = pin.trim();
     const trimmedBranchCode = branchCode.trim().toUpperCase();
     const sanitizedPhone = phone.replace(/[^0-9]/g, "");
-    const trimmedUserId = userId.trim().toUpperCase();
 
-    if (loginMode === "phone") {
-      if (sanitizedPhone.length !== 10) return setError(t("login.invalidPhone"));
-      if (isBlockedPhone(sanitizedPhone)) return setError(t("login.blockedPhone"));
-      if (!/^\d{6}$/.test(trimmedPin)) return setError(t("login.pinError"));
-      if (requiresBranchCode && !trimmedBranchCode) return setError(t("login.branchRequired"));
-    } else {
-      if (!trimmedUserId) return setError(t("login.invalidUserId"));
-      if (!/^\d{6}$/.test(trimmedPin)) return setError(t("login.pinError"));
-    }
+    if (sanitizedPhone.length !== 10) return setError(t("login.invalidPhone"));
+    if (isBlockedPhone(sanitizedPhone)) return setError(t("login.blockedPhone"));
+    if (!/^\d{6}$/.test(trimmedPin)) return setError(t("login.pinError"));
+    if (requiresBranchCode && !trimmedBranchCode) return setError(t("login.branchRequired"));
 
     setError(null);
 
     try {
-      const payload = await login(
-        loginMode === "phone"
-          ? {
-              phone: sanitizedPhone,
-              mpin: trimmedPin,
-              ...(trimmedBranchCode ? { branch_code: trimmedBranchCode } : {}),
-            }
-          : { user_id: trimmedUserId, mpin: trimmedPin }
-      ).unwrap();
+      // Phone number only: the User ID login was removed (the API refuses it too).
+      const payload = await login({
+        phone: sanitizedPhone,
+        mpin: trimmedPin,
+        ...(trimmedBranchCode ? { branch_code: trimmedBranchCode } : {}),
+      }).unwrap();
 
       const userRecord = extractUserRecord(payload);
       if (isStatusBanned(userRecord["status"])) throw new Error(t("login.banned"));
@@ -145,9 +134,7 @@ export default function LoginPage() {
       const tokenValue = isNonEmptyString(payload["token"]) ? payload["token"] : "";
       if (!tokenValue) throw new Error(t("login.tokenMissing"));
 
-      const resolvedPhone =
-        sanitizedPhone || (typeof userRecord["phone"] === "string" ? userRecord["phone"] : "");
-      storeUser({ ...userRecord, phone: resolvedPhone });
+      storeUser({ ...userRecord, phone: sanitizedPhone });
       storeAuthToken(tokenValue);
 
       const playIdCandidate = userRecord["play_id"];
@@ -186,12 +173,11 @@ export default function LoginPage() {
       )}`
     : undefined;
 
-  const showCredentialFields =
-    loginMode === "phone" ? phone.length === 10 && !checkingBranch : userId.trim().length > 0;
+  const showCredentialFields = phone.length === 10 && !checkingBranch;
   const canSubmit =
     showCredentialFields &&
     /^\d{6}$/.test(pin.trim()) &&
-    (loginMode !== "phone" || !requiresBranchCode || branchCode.trim().length > 0);
+    (!requiresBranchCode || branchCode.trim().length > 0);
 
   const chrome = (
     <div className="flex items-center gap-2">
@@ -246,50 +232,19 @@ export default function LoginPage() {
           <h1 className="text-2xl font-semibold">{t("login.title")}</h1>
           <p className="mt-1 text-sm text-muted">{t("login.subtitle")}</p>
 
-          <div className="mt-5 grid grid-cols-2 gap-1 rounded-full border border-border bg-surface-2 p-1">
-            {(["phone", "userId"] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => {
-                  setLoginMode(option);
-                  setError(null);
-                  setPin("");
-                }}
-                className={[
-                  "h-9 truncate rounded-full text-[13px] font-semibold transition-colors",
-                  loginMode === option ? "bg-accent text-on-accent" : "text-muted",
-                ].join(" ")}
-              >
-                {option === "phone" ? t("login.usePhone") : t("login.useUserId")}
-              </button>
-            ))}
-          </div>
-
           <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-            {loginMode === "phone" ? (
-              <Input
-                label={t("login.phone")}
-                type="tel"
-                inputMode="numeric"
-                autoComplete="tel"
-                value={phone}
-                maxLength={10}
-                placeholder="9845127634"
-                onChange={(event) => setPhone(event.target.value.replace(/[^0-9]/g, ""))}
-                hint={checkingBranch && phone.length === 10 ? t("login.checkingBranch") : undefined}
-                required
-              />
-            ) : (
-              <Input
-                label={t("login.userId")}
-                autoComplete="username"
-                value={userId}
-                placeholder="SIND1024"
-                onChange={(event) => setUserId(event.target.value.toUpperCase().trim())}
-                required
-              />
-            )}
+            <Input
+              label={t("login.phone")}
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              value={phone}
+              maxLength={10}
+              placeholder="9845127634"
+              onChange={(event) => setPhone(event.target.value.replace(/[^0-9]/g, ""))}
+              hint={checkingBranch && phone.length === 10 ? t("login.checkingBranch") : undefined}
+              required
+            />
 
             {requiresBranchCode && showCredentialFields ? (
               <Input

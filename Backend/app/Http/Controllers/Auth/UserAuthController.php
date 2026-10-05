@@ -20,35 +20,29 @@ class UserAuthController extends Controller
     public function loginWithMpin(UserMpinLoginRequest $request)
     {
         $credentials = $request->validated();
-        $user = null;
+        $phoneQuery = User::query()->where('phone', $credentials['phone']);
+        $branchCode = strtoupper(trim((string) ($credentials['branch_code'] ?? '')));
 
-        if (!empty($credentials['phone'])) {
-            $phoneQuery = User::query()->where('phone', $credentials['phone']);
-            $branchCode = strtoupper(trim((string) ($credentials['branch_code'] ?? '')));
-
-            if ($branchCode !== '') {
-                $branch = Branch::query()->where('code', $branchCode)->first();
-                if (!$branch) {
-                    return response()->json(
-                        ['message' => 'Invalid branch code.'],
-                        Response::HTTP_UNPROCESSABLE_ENTITY,
-                    );
-                }
-                $phoneQuery->where('branch_id', $branch->id);
-            } else {
-                $matches = (clone $phoneQuery)->count();
-                if ($matches > 1) {
-                    return response()->json(
-                        ['message' => 'Branch code required for this phone number.'],
-                        Response::HTTP_CONFLICT,
-                    );
-                }
+        if ($branchCode !== '') {
+            $branch = Branch::query()->where('code', $branchCode)->first();
+            if (!$branch) {
+                return response()->json(
+                    ['message' => 'Invalid branch code.'],
+                    Response::HTTP_UNPROCESSABLE_ENTITY,
+                );
             }
-
-            $user = $phoneQuery->first();
+            $phoneQuery->where('branch_id', $branch->id);
         } else {
-            $user = $this->findUserForMpinLogin($credentials);
+            $matches = (clone $phoneQuery)->count();
+            if ($matches > 1) {
+                return response()->json(
+                    ['message' => 'Branch code required for this phone number.'],
+                    Response::HTTP_CONFLICT,
+                );
+            }
         }
+
+        $user = $phoneQuery->first();
 
         if (!$user) {
             return response()->json(['message' => 'Invalid credentials.'], Response::HTTP_UNAUTHORIZED);
@@ -160,20 +154,6 @@ class UserAuthController extends Controller
         return response()->json([
             'message' => 'MPIN updated successfully.',
         ]);
-    }
-
-    protected function findUserForMpinLogin(array $credentials): ?User
-    {
-        if (!empty($credentials['user_id'])) {
-            $candidate = strtoupper(trim((string) $credentials['user_id']));
-            return User::where('unique_number', $candidate)->first();
-        }
-
-        if (!empty($credentials['phone'])) {
-            return User::where('phone', $credentials['phone'])->first();
-        }
-
-        return null;
     }
 
     protected function mpinMatches(?string $storedMpin, string $mpin): bool
