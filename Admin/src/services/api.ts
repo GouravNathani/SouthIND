@@ -262,13 +262,17 @@ export const api = createApi({
     }),
     updateAccount: builder.mutation<
       AccountRecord,
-      { id: number; body: Partial<AccountRecord> }
+      { id: number; body: FormData | Partial<AccountRecord> }
     >({
-      query: ({ id, body }) => ({
-        url: `/accounts/${id}`,
-        method: "PATCH",
-        body,
-      }),
+      query: ({ id, body }) => {
+        // PHP only parses multipart bodies on POST, so an image replacement
+        // goes out as POST and Laravel routes it as PATCH via `_method`.
+        if (body instanceof FormData) {
+          body.set("_method", "PATCH");
+          return { url: `/accounts/${id}`, method: "POST", body };
+        }
+        return { url: `/accounts/${id}`, method: "PATCH", body };
+      },
       invalidatesTags: (_result, _error, { id }) => [
         { type: "Account", id },
         { type: "Accounts", id: "LIST" },

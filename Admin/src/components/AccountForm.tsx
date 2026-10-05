@@ -34,6 +34,18 @@ export const toFormValues = (account?: AccountRecord | null): AccountFormValues 
   max_deposit: account?.max_deposit != null ? String(account.max_deposit) : "",
 });
 
+/**
+ * Multipart body for a create/update that carries an image. The backend reads
+ * the file as `scanner_image`; empty fields go out as "" and Laravel turns them
+ * into null, the same as the JSON body does.
+ */
+export const toAccountFormData = (values: AccountFormValues, image: File): FormData => {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(values)) form.append(key, value);
+  form.append("scanner_image", image);
+  return form;
+};
+
 const IFSC_REGEX = /^[A-Z]{4}[0-9][A-Z0-9]{6}$/;
 
 /**
@@ -124,7 +136,7 @@ export default function AccountForm({
             onChange={(used_for) => patch({ used_for })}
             options={[
               { value: "deposit", label: "Deposit" },
-              { value: "withdrawal", label: "Withdrawal" },
+              { value: "withdraw", label: "Withdrawal" },
               { value: "both", label: "Both" },
             ]}
           />

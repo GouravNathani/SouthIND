@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminShell from "@/components/AdminShell";
-import AccountForm, { toFormValues, type AccountFormValues } from "@/components/AccountForm";
+import AccountForm, {
+  toAccountFormData,
+  toFormValues,
+  type AccountFormValues,
+} from "@/components/AccountForm";
+import AccountImageField from "@/components/AccountImageField";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
@@ -24,6 +29,7 @@ export default function AccountDetailPage() {
   useSessionGuard(error);
 
   const [values, setValues] = useState<AccountFormValues>(toFormValues());
+  const [image, setImage] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -64,12 +70,15 @@ export default function AccountDetailPage() {
     try {
       await updateAccount({
         id: account.id,
-        body: {
-          ...values,
-          min_deposit: values.min_deposit ? Number(values.min_deposit) : null,
-          max_deposit: values.max_deposit ? Number(values.max_deposit) : null,
-        },
+        body: image
+          ? toAccountFormData(values, image)
+          : {
+              ...values,
+              min_deposit: values.min_deposit ? Number(values.min_deposit) : null,
+              max_deposit: values.max_deposit ? Number(values.max_deposit) : null,
+            },
       }).unwrap();
+      setImage(null);
       setNotice("Account saved.");
     } catch (err) {
       setFormError(resolveErrorMessage(err, "Could not save this account."));
@@ -103,26 +112,13 @@ export default function AccountDetailPage() {
           error={formError}
           submitLabel="Save changes"
           logoSlot={
-            <div className="min-w-0">
-              <p className="mb-1.5 text-xs font-medium text-muted">
-                {values.type.toLowerCase() === "qr" ? "QR image" : "Logo"}
-              </p>
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt=""
-                  className="max-h-52 max-w-full rounded-md border border-border object-contain"
-                />
-              ) : (
-                <p className="text-xs text-faint">No image uploaded.</p>
-              )}
-              {/* The update endpoint takes JSON only, so swapping the image means
-                  creating a replacement account — stated rather than hidden. */}
-              <p className="mt-2 text-xs text-faint">
-                Images can only be set when the account is created. To change one, create a
-                replacement account and deactivate this one.
-              </p>
-            </div>
+            <AccountImageField
+              isQr={values.type.toLowerCase() === "qr"}
+              file={image}
+              onChange={setImage}
+              onError={setFormError}
+              currentUrl={logoUrl}
+            />
           }
           footer={
             confirmingDelete ? (
