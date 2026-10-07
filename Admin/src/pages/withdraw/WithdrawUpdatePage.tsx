@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminShell from "@/components/AdminShell";
 import CopyRow from "@/components/CopyRow";
 import QuickNotes from "@/components/QuickNotes";
+import WhatsAppShare from "@/components/WhatsAppShare";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge, { statusTone } from "@/components/ui/Badge";
@@ -10,10 +11,15 @@ import { Textarea } from "@/components/ui/Field";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { IconBack } from "@/components/icons";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { useGetWithdrawalsQuery, useUpdateWithdrawalStatusMutation } from "@/services/api";
+import {
+  useGetAppSettingsQuery,
+  useGetWithdrawalsQuery,
+  useUpdateWithdrawalStatusMutation,
+} from "@/services/api";
 import { resolveErrorMessage } from "@/utils/errors";
 import { formatDateTime, formatDuration } from "@/utils/dateTime";
 import { money } from "@/utils/format";
+import { npciAddress, withdrawalShareMessage } from "@/utils/whatsapp";
 
 export default function WithdrawUpdatePage() {
   const navigate = useNavigate();
@@ -22,6 +28,7 @@ export default function WithdrawUpdatePage() {
 
   const { data: withdrawals = [], isLoading, error } = useGetWithdrawalsQuery();
   const [updateStatus, { isLoading: isSaving }] = useUpdateWithdrawalStatusMutation();
+  const { data: appSettings } = useGetAppSettingsQuery();
   useSessionGuard(error);
 
   const [notes, setNotes] = useState("");
@@ -100,9 +107,21 @@ export default function WithdrawUpdatePage() {
             <CopyRow label="Account name" value={withdrawal.account_name} />
             <CopyRow label="A/C" value={withdrawal.account_number} />
             <CopyRow label="IFSC" value={withdrawal.ifsc_code} />
+            <CopyRow
+              label="A/C UPI"
+              value={npciAddress(withdrawal.account_number, withdrawal.ifsc_code)}
+            />
             <CopyRow label="Play ID" value={withdrawal.play_id} />
             <CopyRow label="User" value={withdrawal.user?.name} />
             <CopyRow label="Phone" value={withdrawal.user?.phone} />
+          </div>
+
+          <div className="mt-3 flex">
+            <WhatsAppShare
+              number={appSettings?.withdrawal_wa}
+              message={withdrawalShareMessage(withdrawal)}
+              label="Share on WhatsApp"
+            />
           </div>
 
           <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs">

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SuperShell from "@/components/SuperShell";
 import { useBranch } from "@/components/BranchContext";
+import WhatsAppShare from "@/components/WhatsAppShare";
 import QueueFilters, { EMPTY_FILTERS, type QueueFilterState } from "@/components/QueueFilters";
 import Pagination from "@/components/Pagination";
 import DataTable, { type Column } from "@/components/ui/DataTable";
@@ -16,6 +17,7 @@ import { resolveErrorMessage } from "@/utils/errors";
 import { formatDateTime } from "@/utils/dateTime";
 import { money } from "@/utils/format";
 import { rangeParams } from "@/utils/timeframe";
+import { withdrawalShareMessage } from "@/utils/whatsapp";
 
 const PER_PAGE = 25;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -29,7 +31,7 @@ const destinationOf = (row: WithdrawRecord) => {
 
 export default function WithdrawPage() {
   const navigate = useNavigate();
-  const { branchId, branch } = useBranch();
+  const { branchId, branch, branches } = useBranch();
   const [filters, setFilters] = useState<QueueFilterState>(EMPTY_FILTERS);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -98,6 +100,17 @@ export default function WithdrawPage() {
       key: "created",
       header: "Requested",
       render: (row) => <span className="whitespace-nowrap">{formatDateTime(row.created_at)}</span>,
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      render: (row) => (
+        <WhatsAppShare
+          number={branches.find((entry) => entry.id === row.branch_id)?.withdrawal_wa}
+          message={withdrawalShareMessage(row)}
+        />
+      ),
     },
   ];
 

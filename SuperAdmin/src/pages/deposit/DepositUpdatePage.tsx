@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import SuperShell from "@/components/SuperShell";
 import CopyRow from "@/components/CopyRow";
 import QuickNotes from "@/components/QuickNotes";
+import WhatsAppShare from "@/components/WhatsAppShare";
+import { useBranch } from "@/components/BranchContext";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge, { statusTone } from "@/components/ui/Badge";
@@ -15,6 +17,7 @@ import { resolveErrorMessage } from "@/utils/errors";
 import { formatDateTime, formatDuration } from "@/utils/dateTime";
 import { resolveUploadUrl } from "@/utils/receipt";
 import { money } from "@/utils/format";
+import { depositShareMessage, npciAddress } from "@/utils/whatsapp";
 
 export default function DepositUpdatePage() {
   const navigate = useNavigate();
@@ -23,6 +26,7 @@ export default function DepositUpdatePage() {
 
   const { data: deposits = [], isLoading, error } = useGetDepositsQuery();
   const [updateStatus, { isLoading: isSaving }] = useUpdateDepositStatusMutation();
+  const { branches } = useBranch();
   useSessionGuard(error);
 
   const [notes, setNotes] = useState("");
@@ -76,6 +80,9 @@ export default function DepositUpdatePage() {
     );
   }
 
+  const accountNumber = deposit.account?.account_number ?? deposit.account_number;
+  const ifsc = deposit.account?.ifsc_code ?? deposit.ifsc_code;
+
   return (
     <SuperShell title={`Deposit #${deposit.id}`} subtitle={deposit.user?.name ?? undefined} action={back}>
       <div className="grid gap-4 lg:grid-cols-2">
@@ -103,9 +110,16 @@ export default function DepositUpdatePage() {
               <CopyRow label="Phone" value={deposit.user?.phone} />
               <CopyRow label="Paid into" value={deposit.account?.name ?? deposit.account_name} />
               <CopyRow label="UPI" value={deposit.account?.upi_id ?? deposit.upi_id} />
-              <CopyRow
-                label="A/C"
-                value={deposit.account?.account_number ?? deposit.account_number}
+              <CopyRow label="A/C" value={accountNumber} />
+              <CopyRow label="IFSC" value={ifsc} />
+              <CopyRow label="A/C UPI" value={npciAddress(accountNumber, ifsc)} />
+            </div>
+
+            <div className="mt-3 flex">
+              <WhatsAppShare
+                number={branches.find((entry) => entry.id === deposit.branch_id)?.deposit_wa}
+                message={depositShareMessage(deposit)}
+                label="Share on WhatsApp"
               />
             </div>
 

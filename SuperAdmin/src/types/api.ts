@@ -63,6 +63,9 @@ export type BranchRecord = {
   agent_enabled?: boolean;
   min_deposit_amount?: number | null;
   min_withdrawal_amount?: number | null;
+  // WhatsApp numbers from the branch's app settings — where queue requests are shared.
+  deposit_wa?: string | null;
+  withdrawal_wa?: string | null;
   admins_count?: number | null;
   users_count?: number | null;
   created_at?: string;

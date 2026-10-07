@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminShell from "@/components/AdminShell";
+import WhatsAppShare from "@/components/WhatsAppShare";
 import QueueFilters, { EMPTY_FILTERS, type QueueFilterState } from "@/components/QueueFilters";
 import Pagination from "@/components/Pagination";
 import DataTable, { type Column } from "@/components/ui/DataTable";
@@ -9,12 +10,13 @@ import Button from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { IconRefresh } from "@/components/icons";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { useGetWithdrawalsPageQuery } from "@/services/api";
+import { useGetAppSettingsQuery, useGetWithdrawalsPageQuery } from "@/services/api";
 import type { WithdrawRecord } from "@/types/api";
 import { resolveErrorMessage } from "@/utils/errors";
 import { formatDateTime } from "@/utils/dateTime";
 import { money } from "@/utils/format";
 import { rangeParams } from "@/utils/timeframe";
+import { withdrawalShareMessage } from "@/utils/whatsapp";
 
 const PER_PAGE = 25;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -55,6 +57,7 @@ export default function WithdrawPage() {
   const { data, isFetching, error, refetch } = useGetWithdrawalsPageQuery(params, {
     pollingInterval: 30000,
   });
+  const { data: appSettings } = useGetAppSettingsQuery();
   useSessionGuard(error);
 
   const rows = data?.data ?? [];
@@ -89,6 +92,14 @@ export default function WithdrawPage() {
       key: "created",
       header: "Requested",
       render: (row) => <span className="whitespace-nowrap">{formatDateTime(row.created_at)}</span>,
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      render: (row) => (
+        <WhatsAppShare number={appSettings?.withdrawal_wa} message={withdrawalShareMessage(row)} />
+      ),
     },
   ];
 
