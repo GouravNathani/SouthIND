@@ -36,7 +36,7 @@ export default function DepositUpdatePage() {
   const receiptUrl = resolveUploadUrl(deposit?.receipt_image_url ?? deposit?.receipt_image_path);
   const decided = (deposit?.status ?? "").toLowerCase() !== "pending";
 
-  const decide = async (status: "approved" | "reject") => {
+  const decide = async (status: "approved" | "rejected") => {
     if (!deposit) return;
     setFormError(null);
     try {
@@ -169,7 +169,7 @@ export default function DepositUpdatePage() {
                   type="button"
                   variant="danger"
                   loading={isSaving}
-                  onClick={() => void decide("reject")}
+                  onClick={() => void decide("rejected")}
                 >
                   Reject
                 </Button>

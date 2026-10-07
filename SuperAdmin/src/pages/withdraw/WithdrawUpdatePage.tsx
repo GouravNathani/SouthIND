@@ -32,7 +32,7 @@ export default function WithdrawUpdatePage() {
     [withdrawals, withdrawalId]
   );
 
-  const decide = async (status: "approved" | "reject") => {
+  const decide = async (status: "approved" | "rejected") => {
     if (!withdrawal) return;
     setFormError(null);
     try {
@@ -149,7 +149,7 @@ export default function WithdrawUpdatePage() {
                 type="button"
                 variant="danger"
                 loading={isSaving}
-                onClick={() => void decide("reject")}
+                onClick={() => void decide("rejected")}
               >
                 Reject
               </Button>
