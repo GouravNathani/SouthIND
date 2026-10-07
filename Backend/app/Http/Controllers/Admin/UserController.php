@@ -12,6 +12,7 @@ use App\Models\Deposit;
 use App\Models\User;
 use App\Models\Withdrawal;
 use App\Support\ResolvesBranch;
+use App\Support\Query\UserListOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -72,7 +73,10 @@ class UserController extends Controller
             });
         }
 
-        $users = $query->latest('created_at')->paginate($perPage)->withQueryString();
+        $sortBy = $request->query('sort_by');
+        UserListOrder::apply($query, is_string($sortBy) ? $sortBy : null, $request->boolean('reverse'), $canViewProfit);
+
+        $users = $query->paginate($perPage)->withQueryString();
 
         return UserResource::collection($users)
             ->additional(['user_stats' => $this->userStats($branchId)]);

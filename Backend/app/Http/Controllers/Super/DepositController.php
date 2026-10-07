@@ -137,7 +137,10 @@ class DepositController extends Controller
         // Everything else only needs the newest rows — never the whole table.
         if ($request->has('page') || $request->has('per_page')) {
             $perPage = min(max((int) $request->query('per_page', 25), 1), 100);
-            $deposits = $query->latest()->paginate($perPage)->withQueryString();
+            // ?reverse=1 is the queue's reverse-order button: oldest first.
+            $deposits = ($request->boolean('reverse') ? $query->oldest() : $query->latest())
+                ->paginate($perPage)
+                ->withQueryString();
         } else {
             $deposits = $query->latest()->limit(self::RECENT_LIMIT)->get();
         }

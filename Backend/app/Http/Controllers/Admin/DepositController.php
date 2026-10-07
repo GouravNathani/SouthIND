@@ -149,7 +149,10 @@ class DepositController extends Controller
         });
 
         if ($request->has('page') || $request->has('per_page') || $search !== '' || $startDate !== '' || $endDate !== '') {
-            $deposits = $query->latest()->paginate($perPage)->withQueryString();
+            // ?reverse=1 is the queue's reverse-order button: oldest first.
+            $deposits = ($request->boolean('reverse') ? $query->oldest() : $query->latest())
+                ->paginate($perPage)
+                ->withQueryString();
             return DepositResource::collection($deposits)->additional([
                 'summary' => $summary,
             ]);

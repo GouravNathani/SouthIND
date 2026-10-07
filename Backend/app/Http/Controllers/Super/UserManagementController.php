@@ -11,6 +11,7 @@ use App\Http\Resources\Super\UserResource;
 use App\Models\Deposit;
 use App\Models\User;
 use App\Models\Withdrawal;
+use App\Support\Query\UserListOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -64,29 +65,7 @@ class UserManagementController extends Controller
         }
 
         $sortBy = $request->query('sort_by');
-        if (is_string($sortBy) && $sortBy !== '') {
-            switch ($sortBy) {
-                case 'oldest':
-                    $query->orderBy('created_at', 'asc');
-                    break;
-                case 'last_used':
-                    // Most recently online first; users who never came online sink last.
-                    $query->orderByRaw('last_seen_at IS NULL, last_seen_at DESC')
-                        ->orderBy('created_at', 'desc');
-                    break;
-                case 'profit':
-                    $query->orderByRaw('(deposit_approved_total - withdrawal_approved_total) desc');
-                    break;
-                case 'loss':
-                    $query->orderByRaw('(deposit_approved_total - withdrawal_approved_total) asc');
-                    break;
-                default:
-                    $query->orderBy('created_at', 'desc');
-                    break;
-            }
-        } else {
-            $query->orderBy('created_at', 'desc');
-        }
+        UserListOrder::apply($query, is_string($sortBy) ? $sortBy : null, $request->boolean('reverse'), true);
 
         $perPage = (int) $request->query('per_page', 25);
         if ($perPage < 1) {

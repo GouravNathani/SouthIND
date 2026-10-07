@@ -151,7 +151,10 @@ class WithdrawalController extends Controller
         });
 
         if ($request->has('page') || $request->has('per_page') || $search !== '' || $startDate !== '' || $endDate !== '') {
-            $withdrawals = $query->latest()->paginate($perPage)->withQueryString();
+            // ?reverse=1 is the queue's reverse-order button: oldest first.
+            $withdrawals = ($request->boolean('reverse') ? $query->oldest() : $query->latest())
+                ->paginate($perPage)
+                ->withQueryString();
             return WithdrawalResource::collection($withdrawals)->additional([
                 'summary' => $summary,
             ]);
