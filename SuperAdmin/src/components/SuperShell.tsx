@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
+  useGetCurrentUserQuery,
   useGetDepositsQuery,
   useGetWalletStatusQuery,
   useGetWithdrawalsQuery,
@@ -8,6 +9,7 @@ import {
 } from "@/services/api";
 import { useBranch } from "@/components/BranchContext";
 import { useTheme } from "@/theme/ThemeProvider";
+import { useWaHubEnabled } from "@/hooks/useWaHubEnabled";
 import { BrandMark } from "@/components/Brand";
 import {
   IconAccounts,
@@ -54,6 +56,7 @@ export const NAV: NavEntry[] = [
   { to: "/deposit", label: "Deposit", Icon: IconDeposit, queue: "deposit", tab: true, group: "Operate" },
   { to: "/withdraw", label: "Withdraw", Icon: IconWithdraw, queue: "withdraw", tab: true, group: "Operate" },
   { to: "/support", label: "Support", Icon: IconChat, group: "Operate" },
+  { to: "/whatsapp-hub", label: "WhatsApp", Icon: IconWhatsApp, group: "Operate" },
 
   { to: "/branches", label: "Branches", Icon: IconBranch, tab: true, group: "Network" },
   { to: "/admins", label: "Admins", Icon: IconShield, group: "Network" },
@@ -67,7 +70,7 @@ export const NAV: NavEntry[] = [
   { to: "/banner", label: "Banner", Icon: IconBanner, group: "Configure" },
   { to: "/bonus", label: "Bonus", Icon: IconBonus, group: "Configure" },
   { to: "/winner-streak", label: "Winner Streak", Icon: IconTrophy, group: "Configure" },
-  { to: "/whatsapp", label: "WhatsApp", Icon: IconWhatsApp, group: "Configure" },
+  { to: "/whatsapp", label: "WhatsApp accounts", Icon: IconWhatsApp, group: "Configure" },
   { to: "/settings", label: "Global settings", Icon: IconGlobe2, group: "Configure" },
 ];
 
@@ -106,6 +109,12 @@ export default function SuperShell({
   });
   const { data: wallet } = useGetWalletStatusQuery();
 
+  // /me carries features.wa_hub; refreshed at most every five minutes as the
+  // owner moves between pages, and at once when Global settings are saved.
+  useGetCurrentUserQuery(undefined, { refetchOnMountOrArgChange: 300 });
+  const waHubOn = useWaHubEnabled();
+  const nav = waHubOn ? NAV : NAV.filter((entry) => entry.to !== "/whatsapp-hub");
+
   const badges = {
     deposit: deposits.filter((record) => isPending(record.status)).length,
     withdraw: withdrawals.filter((record) => isPending(record.status)).length,
@@ -140,7 +149,7 @@ export default function SuperShell({
             {group}
           </p>
           <ul className="min-w-0 space-y-0.5">
-            {NAV.filter((entry) => entry.group === group).map(({ to, label, Icon, queue }) => {
+            {nav.filter((entry) => entry.group === group).map(({ to, label, Icon, queue }) => {
               const count = queue ? badges[queue] : 0;
               return (
                 <li key={to} className="min-w-0">

@@ -8,6 +8,7 @@ import {
 } from "@/services/api";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSupportChatEnabled } from "@/hooks/useSupportChatEnabled";
+import { useWaHubEnabled } from "@/hooks/useWaHubEnabled";
 import { BrandMark } from "@/components/Brand";
 import {
   IconAccounts,
@@ -53,7 +54,8 @@ export const NAV: NavEntry[] = [
   { to: "/bonus", label: "Bonus", Icon: IconBonus },
   { to: "/winner-streak", label: "Winner Streak", Icon: IconTrophy },
   { to: "/support", label: "Support", Icon: IconChat },
-  { to: "/whatsapp", label: "WhatsApp", Icon: IconWhatsApp },
+  { to: "/whatsapp-hub", label: "WhatsApp", Icon: IconWhatsApp },
+  { to: "/whatsapp", label: "WhatsApp Inbox", Icon: IconWhatsApp },
   { to: "/setting", label: "Setting", Icon: IconSettings },
 ];
 
@@ -84,11 +86,16 @@ export default function AdminShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [logout] = useLogoutMutation();
 
-  // /me carries features.support_chat; refreshed at most every five minutes as
-  // the admin moves between pages, so switching chat off needs no extra polling.
+  // /me carries features.support_chat and features.wa_hub; refreshed at most
+  // every five minutes as the admin moves between pages, so switching either
+  // off needs no extra polling.
   useGetCurrentUserQuery(undefined, { refetchOnMountOrArgChange: 300 });
   const supportChatOn = useSupportChatEnabled();
-  const nav = supportChatOn ? NAV : NAV.filter((entry) => entry.to !== "/support");
+  const waHubOn = useWaHubEnabled();
+  const nav = NAV.filter(
+    (entry) =>
+      (supportChatOn || entry.to !== "/support") && (waHubOn || entry.to !== "/whatsapp-hub")
+  );
 
   // Queue badges. Polled rather than pushed: a stale "3 pending" badge is the
   // difference between a payout going out in a minute and in an hour.

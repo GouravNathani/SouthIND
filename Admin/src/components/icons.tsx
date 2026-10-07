@@ -171,6 +171,21 @@ export const IconTrash = ({ size = 16 }: P) => (
   <svg {...base(size)}><path d="M4 7h16" /><path d="M9 7V5h6v2" /><path d="M6.5 7 7.5 20h9L17.5 7" /></svg>
 );
 
+export const IconLock = ({ size = 14 }: P) => (
+  <svg {...base(size)}><rect x="5" y="10.5" width="14" height="10" rx="2" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></svg>
+);
+
+export const IconClock = ({ size = 14 }: P) => (
+  <svg {...base(size)}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
+);
+
+export const IconLink = ({ size = 18 }: P) => (
+  <svg {...base(size)}>
+    <path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2" />
+    <path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2" />
+  </svg>
+);
+
 /**
  * The brand mark: the heart cut out of the O in the SouthIND logo. Filled with
  * currentColor so it takes the active skin's accent wherever it is placed.

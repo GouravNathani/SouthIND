@@ -699,3 +699,227 @@ export type PageMeta = {
 };
 
 export type Paginated<T> = { data: T[]; meta: PageMeta };
+
+// ── WhatsApp Hub ─────────────────────────────────────────────────────────────
+// The branch's own WhatsApp number, linked by QR. The backend proxies the hub,
+// so these are the hub's shapes unchanged unless noted.
+
+export type WaConnectionStatus =
+  | "not_linked"
+  | "starting"
+  | "qr"
+  | "connected"
+  | "expired"
+  | "logged_out"
+  | "banned"
+  | "replaced";
+
+/** Only meaningful while connected. asleep/waking still count as connected. */
+export type WaSocketState = "awake" | "waking" | "asleep" | "down";
+
+export type WaLinkedAccount = {
+  number: string;
+  name?: string | null;
+  platform?: string | null;
+};
+
+/** cap is null for a branch the hub has not created yet. */
+export type WaDailyCount = { sent: number; cap: number | null };
+
+export type WaConnection = {
+  key: string;
+  label: string;
+  status: WaConnectionStatus;
+  socket: WaSocketState | null;
+  me: WaLinkedAccount | null;
+  /** data:image/png;base64,… — only while status is "qr". */
+  qr: string | null;
+  qr_expires_in: number;
+  qr_attempt: number;
+  /** Super admin switch; false means nothing is sent for this branch. */
+  enabled: boolean;
+  header: string;
+  footer: string;
+  today: WaDailyCount;
+  linked_at: string | null;
+  last_sent_at: string | null;
+};
+
+export type WaConnectionUpdate = { header?: string; footer?: string };
+
+export type WaVariable = {
+  key: string;
+  label: string;
+  /** Sent to the user but stored as •••• in history (e.g. MPIN). */
+  secret: boolean;
+  sample: string;
+};
+
+export type WaEventKey =
+  | "deposit.approved"
+  | "deposit.rejected"
+  | "withdrawal.approved"
+  | "withdrawal.rejected"
+  | "user.welcome"
+  | "mpin.reset"
+  | "bonus.approved";
+
+export type WaEvent = {
+  key: WaEventKey | (string & {});
+  label: string;
+  enabled: boolean;
+  body: string;
+  default_body: string;
+  is_custom: boolean;
+  variables: WaVariable[];
+};
+
+/** body: null resets the text to the default. */
+export type WaEventUpdate = { enabled?: boolean; body?: string | null };
+
+export type WaPreview = { text: string };
+
+export type WaMessageKind = "event" | "campaign" | "test";
+
+export type WaMessageStatus =
+  | "scheduled"
+  | "queued"
+  | "sending"
+  | "sent"
+  | "delivered"
+  | "read"
+  | "failed"
+  | "skipped"
+  | "cancelled";
+
+export type WaSkipReason =
+  | "event_off"
+  | "not_connected"
+  | "disabled"
+  | "opted_out"
+  | "bad_number"
+  | "no_whatsapp"
+  | "cap_reached"
+  | "duplicate"
+  | "cancelled";
+
+export type WaActor = { type: string; id: string; name?: string | null };
+
+export type WaMessageRef = { type: string; id: string; user_id?: string | null };
+
+export type WaMessage = {
+  id: number;
+  connection: string;
+  kind: WaMessageKind;
+  event: string | null;
+  campaign_id: number | null;
+  to: string;
+  to_name: string | null;
+  /** History text — secret variables already masked. */
+  body: string;
+  status: WaMessageStatus;
+  skip_reason: WaSkipReason | (string & {}) | null;
+  error: string | null;
+  coins: number;
+  ref: WaMessageRef | null;
+  actor: WaActor | null;
+  created_at: string;
+  sent_at: string | null;
+  delivered_at: string | null;
+  read_at: string | null;
+  /** Super admin list only. */
+  branch_id?: number | null;
+  branch_name?: string | null;
+};
+
+export type WaPageMeta = { total: number; page: number; per_page: number };
+
+export type WaPage<T> = { data: T[]; meta: WaPageMeta };
+
+export type WaMessagesQuery = {
+  kind?: WaMessageKind;
+  event?: string;
+  status?: WaMessageStatus;
+  /** Number contains. */
+  q?: string;
+  /** YYYY-MM-DD, IST. */
+  from?: string;
+  to?: string;
+  page?: number;
+  per_page?: number;
+};
+
+export type WaTemplate = {
+  id: number;
+  name: string;
+  body: string;
+  use_count: number;
+  updated_at: string | null;
+};
+
+export type WaTemplatesResponse = { templates: WaTemplate[]; variables: WaVariable[] };
+
+export type WaTemplateInput = { name: string; body: string };
+
+export type WaCampaignStatus = "scheduled" | "running" | "done" | "cancelled";
+
+export type WaCampaignCounts = {
+  total: number;
+  pending: number;
+  sent: number;
+  delivered: number;
+  read: number;
+  failed: number;
+  skipped: number;
+};
+
+export type WaCampaign = {
+  id: number;
+  connection: string;
+  title: string;
+  body: string;
+  status: WaCampaignStatus;
+  send_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  counts: WaCampaignCounts;
+  audience_label: string | null;
+  actor: WaActor | null;
+  created_at: string;
+  /** Super admin list only. */
+  branch_id?: number | null;
+  branch_name?: string | null;
+};
+
+export type WaAudience =
+  | { type: "tags"; tag_ids: number[] }
+  | { type: "users"; user_ids: number[] };
+
+export type WaCampaignPreview = {
+  total: number;
+  skipped: { no_phone: number; duplicate: number; inactive: number };
+  coins: number;
+  sample: { id: number; name: string | null; phone_masked: string }[];
+};
+
+export type WaCampaignInput = {
+  title: string;
+  body?: string;
+  template_id?: number;
+  audience: WaAudience;
+  /** ISO-8601; omitted = send now. */
+  send_at?: string;
+};
+
+export type WaUsageTotals = { sent: number; coins: number };
+
+export type WaUsage = {
+  today: WaUsageTotals;
+  month: WaUsageTotals;
+  by_connection: {
+    connection: string;
+    today_sent: number;
+    month_sent: number;
+    month_coins: number;
+  }[];
+};

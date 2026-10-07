@@ -18,6 +18,7 @@ type FormState = {
   user_panel_maintenance_enabled: boolean;
   bonus_deposit_enabled: boolean;
   support_chat_enabled: boolean;
+  wa_hub_enabled: boolean;
 };
 
 const toForm = (settings?: GlobalSettings | null): FormState => ({
@@ -29,6 +30,8 @@ const toForm = (settings?: GlobalSettings | null): FormState => ({
   bonus_deposit_enabled: Boolean(settings?.bonus_deposit_enabled),
   // Chat is on unless explicitly switched off (no settings row yet = on).
   support_chat_enabled: settings?.support_chat_enabled !== false,
+  // WhatsApp Hub starts off: on only once it has been switched on.
+  wa_hub_enabled: settings?.wa_hub_enabled === true,
 });
 
 export default function GlobalSettingsPage() {
@@ -149,6 +152,23 @@ export default function GlobalSettingsPage() {
                 <span className="block text-xs text-muted">
                   Off: users cannot open it, branch admins do not see it and no panel polls it.
                   Old chats are kept.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex min-w-0 items-start gap-3">
+              <input
+                type="checkbox"
+                checked={form.wa_hub_enabled}
+                onChange={(event) => patch({ wa_hub_enabled: event.target.checked })}
+                className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]"
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-text">WhatsApp Hub</span>
+                <span className="block text-xs text-muted">
+                  Each branch links its own WhatsApp number and messages users on deposits,
+                  withdrawals and campaigns (1 coin per message). Off: nothing is sent and the
+                  WhatsApp page is hidden. Links, texts and history are kept.
                 </span>
               </span>
             </label>

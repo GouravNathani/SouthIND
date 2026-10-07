@@ -1,6 +1,12 @@
-import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query";
+import type {
+  BaseQueryApi,
+  BaseQueryFn,
+  FetchArgs,
+  FetchBaseQueryError,
+} from "@reduxjs/toolkit/query";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { withInFlightDedup } from "./dedupeBaseQuery";
+import { isWaHubOffError } from "../utils/errors";
 
 import type {
   AccountRecord,
@@ -53,6 +59,13 @@ import type {
   ReferralBranchSummary,
   ReferralOverview,
   ReferralSettings,
+  WaBranchConnection,
+  WaCampaign,
+  WaMessage,
+  WaPage,
+  WaSuperCampaignsQuery,
+  WaSuperMessagesQuery,
+  WaUsage,
 } from "../types/api";
 
 const TOKEN_KEY = "sind-super-token";
@@ -197,6 +210,10 @@ export const api = createApi({
     "CommissionEntries",
     "CommissionPayouts",
     "ReferralAudits",
+    "WaConnections",
+    "WaMessages",
+    "WaCampaigns",
+    "WaUsage",
   ],
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, Credentials>({
@@ -912,8 +929,9 @@ export const api = createApi({
         method: "PATCH",
         body,
       }),
-      // "Me" carries features.support_chat, which the sidebar and Support page read.
-      invalidatesTags: ["GlobalSettings", "Me"],
+      // "Me" carries features.support_chat and features.wa_hub; the WhatsApp page
+      // refetches so switching the hub on shows its data without a reload.
+      invalidatesTags: ["GlobalSettings", "Me", "WaConnections", "WaMessages", "WaCampaigns", "WaUsage"],
     }),
     // Winner Streak. Every call except the cross-branch summary carries a
     // branch_id — the owner always operates on one branch's board at a time.
@@ -1469,8 +1487,135 @@ export const api = createApi({
       query: (params) => ({ url: "/referral/audits", params }),
       providesTags: [{ type: "ReferralAudits", id: "LIST" }],
     }),
+
+    // ── WhatsApp Hub ────────────────────────────────────────────────────────
+    // Every branch's own number. The backend proxies the hub, so these are the
+    // hub's shapes with branch_id / branch_name added to each row.
+    getWaConnections: builder.query<WaBranchConnection[], void>({
+      query: () => "/wa/connections",
+      transformResponse: (response: unknown) => unwrapWaList<WaBranchConnection>(response, "connections"),
+      providesTags: ["WaConnections"],
+      onQueryStarted: (_arg, { dispatch, queryFulfilled }) =>
+        markWaHubOffOnRefusal(queryFulfilled, dispatch),
+    }),
+    // The switch flips in the list at once and goes back if the call fails.
+    setWaConnectionEnabled: builder.mutation<unknown, { branchId: number; enabled: boolean }>({
+      query: ({ branchId, enabled }) => ({
+        url: `/wa/connections/${branchId}/${enabled ? "enable" : "disable"}`,
+        method: "POST",
+        body: {},
+      }),
+      onQueryStarted: async ({ branchId, enabled }, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          api.util.updateQueryData("getWaConnections", undefined, (draft) => {
+            const row = draft.find((entry) => entry.branch_id === branchId);
+            if (row) row.enabled = enabled;
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
+      invalidatesTags: ["WaConnections"],
+    }),
+    getWaMessages: builder.query<WaPage<WaMessage>, WaSuperMessagesQuery>({
+      query: (params) => ({ url: "/wa/messages", params: compactWaParams(params) }),
+      transformResponse: (response: unknown) => toWaPage<WaMessage>(response),
+      providesTags: ["WaMessages"],
+    }),
+    getWaCampaigns: builder.query<WaPage<WaCampaign>, WaSuperCampaignsQuery>({
+      query: (params) => ({ url: "/wa/campaigns", params: compactWaParams(params) }),
+      transformResponse: (response: unknown) => toWaPage<WaCampaign>(response),
+      providesTags: ["WaCampaigns"],
+    }),
+    getWaUsage: builder.query<WaUsage, void>({
+      query: () => "/wa/usage",
+      transformResponse: (response: unknown): WaUsage => {
+        const payload = unwrapWaObject<Partial<WaUsage> | null>(response, "today");
+        return {
+          today: { sent: Number(payload?.today?.sent ?? 0), coins: Number(payload?.today?.coins ?? 0) },
+          month: { sent: Number(payload?.month?.sent ?? 0), coins: Number(payload?.month?.coins ?? 0) },
+          by_connection: Array.isArray(payload?.by_connection) ? payload.by_connection : [],
+        };
+      },
+      providesTags: ["WaUsage"],
+      onQueryStarted: (_arg, { dispatch, queryFulfilled }) =>
+        markWaHubOffOnRefusal(queryFulfilled, dispatch),
+    }),
   }),
 });
+
+/**
+ * The backend passes the hub's JSON through. Tolerate a Laravel `{ data }`
+ * wrapper as well: unwrap only when the expected key is not at the top already.
+ */
+function unwrapWaObject<T>(payload: unknown, probeKey: string): T {
+  if (payload && typeof payload === "object" && !(probeKey in payload) && "data" in payload) {
+    const inner = (payload as { data?: unknown }).data;
+    if (inner && typeof inner === "object") return inner as T;
+  }
+  return payload as T;
+}
+
+function unwrapWaList<T>(payload: unknown, key: string): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    if (Array.isArray(record[key])) return record[key] as T[];
+    if (Array.isArray(record.data)) return record.data as T[];
+  }
+  return [];
+}
+
+function toWaPage<T>(payload: unknown): WaPage<T> {
+  const record = (payload && typeof payload === "object" ? payload : {}) as {
+    data?: unknown;
+    meta?: Partial<WaPage<T>["meta"]>;
+  };
+  const data = Array.isArray(record.data) ? (record.data as T[]) : [];
+  return {
+    data,
+    meta: {
+      total: Number(record.meta?.total ?? data.length),
+      page: Number(record.meta?.page ?? 1),
+      per_page: Number(record.meta?.per_page ?? (data.length || 25)),
+    },
+  };
+}
+
+/** Drops empty filters so the request only carries what was actually set. */
+function compactWaParams(params: object): Record<string, string | number> {
+  const out: Record<string, string | number> = {};
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    out[key] = value as string | number;
+  });
+  return out;
+}
+
+/**
+ * A 403 `wa_hub_disabled` means the hub was switched off (here or in another
+ * tab): drop the sidebar entry now rather than at the next /me refresh.
+ */
+function markWaHubOffOnRefusal(
+  queryFulfilled: Promise<unknown>,
+  dispatch: BaseQueryApi["dispatch"],
+): Promise<void> {
+  return queryFulfilled.then(
+    () => undefined,
+    (result: { error?: unknown } | undefined) => {
+      if (!isWaHubOffError(result?.error)) return;
+      dispatch(
+        api.util.updateQueryData("getCurrentUser", undefined, (draft) => {
+          const features = (draft.features ?? {}) as Record<string, unknown>;
+          draft.features = { ...features, wa_hub: false };
+        }),
+      );
+    },
+  );
+}
 
 export const {
   useLoginMutation,
@@ -1574,4 +1719,9 @@ export const {
   useAdvanceCommissionPayoutMutation,
   useProcessCommissionPayoutMutation,
   useGetReferralAuditsQuery,
+  useGetWaConnectionsQuery,
+  useSetWaConnectionEnabledMutation,
+  useGetWaMessagesQuery,
+  useGetWaCampaignsQuery,
+  useGetWaUsageQuery,
 } = api;
