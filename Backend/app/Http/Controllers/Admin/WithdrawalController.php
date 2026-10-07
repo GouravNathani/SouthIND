@@ -11,6 +11,7 @@ use App\Support\Cache\WithdrawalCache;
 use App\Support\Push\UserPushNotifier;
 use App\Support\Query\DurationAggregate;
 use App\Support\ResolvesBranch;
+use App\Support\WaHub\WaHubNotifier;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -207,6 +208,9 @@ class WithdrawalController extends Controller
         } catch (\Throwable $e) {
             Log::warning('User push after withdrawal status failed.', ['error' => $e->getMessage()]);
         }
+
+        // WhatsApp to the user (queued; never throws).
+        WaHubNotifier::withdrawalStatus($withdrawal, $request->user());
 
         // Clear user cache (new keying) and legacy play_id cache to avoid stale data
         WithdrawalCache::forgetForPlay($withdrawal->user_id ? 'user:' . $withdrawal->user_id : null);

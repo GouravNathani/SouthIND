@@ -41,4 +41,16 @@ return [
         'base_url' => env('WHATSAPP_BASE_URL', 'https://graph.facebook.com'),
     ],
 
+    // WA Hub: sends WhatsApp messages from each branch's own linked number.
+    // Server to server only (HMAC signed); without key + secret the feature
+    // behaves as unavailable and no HTTP call is made.
+    'wahub' => [
+        'url' => env('WAHUB_URL', 'https://wa.bookflow.tech'),
+        'key' => env('WAHUB_KEY'),
+        'secret' => env('WAHUB_SECRET'),
+        'timeout' => (int) env('WAHUB_TIMEOUT', 8),
+        // {{login_link}} for a branch without its own domain.
+        'login_link' => env('WAHUB_LOGIN_LINK', 'https://southindiaexch.com'),
+    ],
+
 ];

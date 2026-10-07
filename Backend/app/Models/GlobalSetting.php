@@ -17,6 +17,7 @@ class GlobalSetting extends Model
         'user_panel_maintenance_enabled',
         'bonus_deposit_enabled',
         'support_chat_enabled',
+        'wa_hub_enabled',
         'created_by',
     ];
 
@@ -25,6 +26,7 @@ class GlobalSetting extends Model
         'user_panel_maintenance_enabled' => 'boolean',
         'bonus_deposit_enabled' => 'boolean',
         'support_chat_enabled' => 'boolean',
+        'wa_hub_enabled' => 'boolean',
     ];
 
     public function creator()

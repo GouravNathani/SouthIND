@@ -80,6 +80,9 @@ class AdminAuthController extends Controller
         // `features` rides on the /me poll the panels already make, so a super
         // admin switching support chat off reaches every open panel within a poll.
         return (new AdminResource($request->user()->load('branch')))
-            ->additional(['features' => ['support_chat' => GlobalSettingCache::supportChatEnabled()]]);
+            ->additional(['features' => [
+                'support_chat' => GlobalSettingCache::supportChatEnabled(),
+                'wa_hub' => GlobalSettingCache::waHubEnabled(),
+            ]]);
     }
 }

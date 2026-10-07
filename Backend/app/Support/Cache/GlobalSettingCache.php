@@ -29,6 +29,15 @@ class GlobalSettingCache
         return (bool) (self::current()?->support_chat_enabled ?? true);
     }
 
+    /**
+     * WA Hub (WhatsApp from each branch's own number) is OFF until the super
+     * admin switches it on. A missing row or column counts as OFF.
+     */
+    public static function waHubEnabled(): bool
+    {
+        return (bool) (self::current()?->wa_hub_enabled ?? false);
+    }
+
     public static function flush(): void
     {
         Cache::forget(self::KEY);
