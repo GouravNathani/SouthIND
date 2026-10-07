@@ -104,6 +104,8 @@ export type DepositQueryParams = {
   status?: string;
   start_date?: string;
   end_date?: string;
+  /** Oldest first — the list's reverse-order button. */
+  reverse?: boolean;
 };
 
 export type WithdrawQueryParams = {
@@ -113,6 +115,8 @@ export type WithdrawQueryParams = {
   status?: string;
   start_date?: string;
   end_date?: string;
+  /** Oldest first — the list's reverse-order button. */
+  reverse?: boolean;
 };
 
 export type BannerRecord = {
@@ -264,6 +268,9 @@ export type UsersQueryParams = {
   per_page?: number;
   search?: string;
   status?: string;
+  sort_by?: string;
+  /** Flip the sort (oldest first, Z → A, …). */
+  reverse?: boolean;
 };
 
 export type WalletExpiryStatus = {

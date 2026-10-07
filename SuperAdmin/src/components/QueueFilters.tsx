@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Card from "@/components/ui/Card";
+import ReverseOrderButton from "@/components/ReverseOrderButton";
 import { Input, Select } from "@/components/ui/Field";
 import Segmented from "@/components/ui/Segmented";
 import { TIMEFRAMES, type TimeframeId } from "@/utils/timeframe";
@@ -20,6 +21,8 @@ export type QueueFilterState = {
   timeframe: TimeframeId;
   customStart: string;
   customEnd: string;
+  /** Oldest first instead of newest. */
+  reverse: boolean;
 };
 
 export const EMPTY_FILTERS: QueueFilterState = {
@@ -28,6 +31,7 @@ export const EMPTY_FILTERS: QueueFilterState = {
   timeframe: "week",
   customStart: "",
   customEnd: "",
+  reverse: false,
 };
 
 /** Filter bar shared by the deposit and withdrawal queues. */
@@ -63,13 +67,16 @@ export default function QueueFilters({
             </option>
           ))}
         </Select>
-        <Segmented
-          label="Status"
-          value={value.status}
-          onChange={(status) => patch({ status })}
-          options={STATUS_CHOICES}
-          className="sm:col-span-2"
-        />
+        <div className="flex min-w-0 items-end gap-2 sm:col-span-2">
+          <Segmented
+            label="Status"
+            value={value.status}
+            onChange={(status) => patch({ status })}
+            options={STATUS_CHOICES}
+            className="flex-1"
+          />
+          <ReverseOrderButton reversed={value.reverse} onToggle={() => patch({ reverse: !value.reverse })} />
+        </div>
         {right ? <div className="flex items-end sm:col-span-2 lg:col-span-4">{right}</div> : null}
       </div>
 

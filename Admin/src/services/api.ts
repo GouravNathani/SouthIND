@@ -312,6 +312,7 @@ export const api = createApi({
         if (params?.status) queryParams.status = params.status;
         if (params?.start_date) queryParams.start_date = params.start_date;
         if (params?.end_date) queryParams.end_date = params.end_date;
+        if (params?.reverse) queryParams.reverse = 1;
         return {
           url: "/deposits",
           params: queryParams,
@@ -390,6 +391,7 @@ export const api = createApi({
         if (params?.status) queryParams.status = params.status;
         if (params?.start_date) queryParams.start_date = params.start_date;
         if (params?.end_date) queryParams.end_date = params.end_date;
+        if (params?.reverse) queryParams.reverse = 1;
         return {
           url: "/withdrawals",
           params: queryParams,
@@ -505,6 +507,8 @@ export const api = createApi({
         if (params?.per_page) queryParams.per_page = params.per_page;
         if (params?.search) queryParams.search = params.search;
         if (params?.status) queryParams.status = params.status;
+        if (params?.sort_by) queryParams.sort_by = params.sort_by;
+        if (params?.reverse) queryParams.reverse = 1;
         return {
           url: "/users",
           params: queryParams,

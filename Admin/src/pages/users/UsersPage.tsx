@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import AdminShell from "@/components/AdminShell";
 import AgentSelect from "@/components/AgentSelect";
 import Pagination from "@/components/Pagination";
-import Card, { CardTitle } from "@/components/ui/Card";
+import UserSortControl from "@/components/UserSortControl";
+import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge, { statusTone } from "@/components/ui/Badge";
 import DataTable, { type Column } from "@/components/ui/DataTable";
@@ -12,12 +13,13 @@ import Segmented from "@/components/ui/Segmented";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { IconPlus } from "@/components/icons";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { useCreateUserMutation, useGetUsersQuery } from "@/services/api";
+import { useCreateUserMutation, useGetCurrentUserQuery, useGetUsersQuery } from "@/services/api";
 import type { UserRecord } from "@/types/api";
 import { resolveErrorMessage } from "@/utils/errors";
 import { formatLastSeen, isActiveNow } from "@/utils/dateTime";
 import { compactInr } from "@/utils/format";
 import { sanitizePhone, validateMobile } from "@/utils/phone";
+import type { UserSort } from "@/utils/userSort";
 
 const PER_PAGE = 25;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -28,6 +30,8 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [sortBy, setSortBy] = useState<UserSort>("newest");
+  const [reverse, setReverse] = useState(false);
   const [page, setPage] = useState(1);
 
   const [formName, setFormName] = useState("");
@@ -36,6 +40,11 @@ export default function UsersPage() {
   const [formAgentId, setFormAgentId] = useState<number | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  // On a phone the form fills the first screen and pushes the search, filters
+  // and the list below the fold, so there it starts folded.
+  const [showGenerate, setShowGenerate] = useState(
+    () => typeof window === "undefined" || window.matchMedia("(min-width: 640px)").matches
+  );
 
   const [createUser, { isLoading: isCreating }] = useCreateUserMutation();
 
@@ -44,7 +53,14 @@ export default function UsersPage() {
     return () => window.clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => setPage(1), [debouncedSearch, status]);
+  useEffect(() => setPage(1), [debouncedSearch, status, sortBy, reverse]);
+
+  // Profit totals are only sent to admins cleared to see them; the API falls
+  // back to newest otherwise, so the option is not offered either.
+  const { data: me } = useGetCurrentUserQuery();
+  const canSeeProfit = Boolean(
+    (me?.data as { allow_profit_view?: boolean } | undefined)?.allow_profit_view
+  );
 
   const params = useMemo(
     () => ({
@@ -52,8 +68,10 @@ export default function UsersPage() {
       per_page: PER_PAGE,
       search: debouncedSearch || undefined,
       status: status || undefined,
+      sort_by: sortBy === "newest" ? undefined : sortBy,
+      reverse: reverse || undefined,
     }),
-    [page, debouncedSearch, status]
+    [page, debouncedSearch, status, sortBy, reverse]
   );
 
   const { data, isFetching, error } = useGetUsersQuery(params);
@@ -173,46 +191,63 @@ export default function UsersPage() {
     >
       <div className="space-y-4">
         <Card>
-          <CardTitle>Generate user</CardTitle>
-          <form className="space-y-4" onSubmit={handleCreate}>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Input
-                label="Phone"
-                inputMode="numeric"
-                placeholder="9845127634"
-                value={formPhone}
-                onChange={(event) => setFormPhone(sanitizePhone(event.target.value))}
-                required
-              />
-              <Input
-                label="Name (optional)"
-                value={formName}
-                onChange={(event) => setFormName(event.target.value)}
-              />
-              <Input
-                label="Play ID (optional)"
-                value={formPlayId}
-                onChange={(event) => setFormPlayId(event.target.value.toUpperCase())}
-                hint="Blank lets the backend assign one."
-              />
-            </div>
-
-            <AgentSelect value={formAgentId} onChange={(id) => setFormAgentId(id)} />
-
-            {formError ? <ErrorNote>{formError}</ErrorNote> : null}
-            {formSuccess ? (
-              <p className="rounded-md bg-accent-soft px-3 py-2 text-xs text-accent">{formSuccess}</p>
-            ) : null}
-
-            <Button type="submit" loading={isCreating} disabled={formPhone.length !== 10}>
-              <IconPlus size={16} />
-              Generate
-            </Button>
-          </form>
+          <div className={["flex min-w-0 items-center justify-between gap-3", showGenerate ? "mb-3" : ""].join(" ")}>
+            <h2 className="truncate text-[13px] font-semibold tracking-wide text-muted uppercase">
+              Generate user
+            </h2>
+            {showGenerate ? (
+              <Button size="sm" variant="ghost" aria-expanded onClick={() => setShowGenerate(false)}>
+                Hide
+              </Button>
+            ) : (
+              <Button size="sm" variant="secondary" aria-expanded={false} onClick={() => setShowGenerate(true)}>
+                <IconPlus size={16} />
+                New user
+              </Button>
+            )}
+          </div>
+          {showGenerate ? (
+            <form className="space-y-4" onSubmit={handleCreate}>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Input
+                  label="Phone"
+                  inputMode="numeric"
+                  placeholder="9845127634"
+                  value={formPhone}
+                  onChange={(event) => setFormPhone(sanitizePhone(event.target.value))}
+                  required
+                />
+                <Input
+                  label="Name (optional)"
+                  value={formName}
+                  onChange={(event) => setFormName(event.target.value)}
+                />
+                <Input
+                  label="Play ID (optional)"
+                  value={formPlayId}
+                  onChange={(event) => setFormPlayId(event.target.value.toUpperCase())}
+                  hint="Blank lets the backend assign one."
+                />
+              </div>
+  
+              <AgentSelect value={formAgentId} onChange={(id) => setFormAgentId(id)} />
+  
+              {formError ? <ErrorNote>{formError}</ErrorNote> : null}
+              {formSuccess ? (
+                <p className="rounded-md bg-accent-soft px-3 py-2 text-xs text-accent">{formSuccess}</p>
+              ) : null}
+  
+              <Button type="submit" loading={isCreating} disabled={formPhone.length !== 10}>
+                <IconPlus size={16} />
+                Generate
+              </Button>
+            </form>
+          ) : null}
         </Card>
 
         <Card>
-          <div className="grid gap-3 sm:grid-cols-2">
+          {/* sm: search | status, sort underneath; lg: one row with sort widest. */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Input
               label="Search"
               placeholder="Name, phone, play ID"
@@ -228,6 +263,14 @@ export default function UsersPage() {
                 { value: "active", label: "Active" },
                 { value: "banned", label: "Banned" },
               ]}
+            />
+            <UserSortControl
+              value={sortBy}
+              reversed={reverse}
+              onChange={setSortBy}
+              onReverse={() => setReverse((value) => !value)}
+              withProfit={canSeeProfit}
+              className="sm:col-span-2"
             />
           </div>
         </Card>

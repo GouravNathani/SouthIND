@@ -261,6 +261,8 @@ export type DepositQueryParams = {
   status?: string;
   start_date?: string;
   end_date?: string;
+  /** Oldest first — the list's reverse-order button. */
+  reverse?: boolean;
   branchId?: string | number;
 };
 
@@ -271,6 +273,8 @@ export type WithdrawQueryParams = {
   status?: string;
   start_date?: string;
   end_date?: string;
+  /** Oldest first — the list's reverse-order button. */
+  reverse?: boolean;
   branchId?: string | number;
 };
 

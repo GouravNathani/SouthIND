@@ -347,6 +347,7 @@ export const api = createApi({
         if (params?.status) queryParams.status = params.status;
         if (params?.start_date) queryParams.start_date = params.start_date;
         if (params?.end_date) queryParams.end_date = params.end_date;
+        if (params?.reverse) queryParams.reverse = 1;
         if (params?.branchId) queryParams.branch_id = params.branchId;
         return {
           url: "/deposits",
@@ -446,6 +447,7 @@ export const api = createApi({
         if (params?.status) queryParams.status = params.status;
         if (params?.start_date) queryParams.start_date = params.start_date;
         if (params?.end_date) queryParams.end_date = params.end_date;
+        if (params?.reverse) queryParams.reverse = 1;
         if (params?.branchId) queryParams.branch_id = params.branchId;
         return {
           url: "/withdrawals",
@@ -582,7 +584,9 @@ export const api = createApi({
           per_page?: number;
           branchId?: string | number;
           search?: string;
+          status?: string;
           sort_by?: string;
+          reverse?: boolean;
         }
       | void
     >({
@@ -592,7 +596,9 @@ export const api = createApi({
         if (args?.per_page) params.per_page = args.per_page;
         if (args?.branchId) params.branch_id = args.branchId;
         if (args?.search) params.search = args.search;
+        if (args?.status) params.status = args.status;
         if (args?.sort_by) params.sort_by = args.sort_by;
+        if (args?.reverse) params.reverse = 1;
         return {
           url: "/users",
           params: Object.keys(params).length ? params : undefined,

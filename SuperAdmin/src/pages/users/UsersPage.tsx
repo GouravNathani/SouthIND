@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SuperShell from "@/components/SuperShell";
 import { useBranch } from "@/components/BranchContext";
+import Pagination from "@/components/Pagination";
+import UserSortControl from "@/components/UserSortControl";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge, { statusTone } from "@/components/ui/Badge";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import { Input } from "@/components/ui/Field";
+import Segmented from "@/components/ui/Segmented";
 import { IconChevronDown } from "@/components/icons";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import {
-  useGetUsersQuery,
+  useGetUsersPageQuery,
   useMoveUserBranchMutation,
   useResetUserMpinMutation,
   useUpdateUserStatusMutation,
@@ -19,13 +22,19 @@ import type { UserRecord } from "@/types/api";
 import { resolveErrorMessage } from "@/utils/errors";
 import { formatLastSeen, isActiveNow } from "@/utils/dateTime";
 import { compactInr } from "@/utils/format";
+import type { UserSort } from "@/utils/userSort";
 
+const PER_PAGE = 25;
 const SEARCH_DEBOUNCE_MS = 350;
 
 export default function UsersPage() {
   const { branches, branchId, branch } = useBranch();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [sortBy, setSortBy] = useState<UserSort>("newest");
+  const [reverse, setReverse] = useState(false);
+  const [page, setPage] = useState(1);
   const [movingId, setMovingId] = useState<number | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -35,10 +44,23 @@ export default function UsersPage() {
     return () => window.clearTimeout(timer);
   }, [search]);
 
-  const { data: users = [], isFetching, error } = useGetUsersQuery({
-    branchId: branchId ?? undefined,
-    search: debouncedSearch || undefined,
-  });
+  useEffect(() => setPage(1), [debouncedSearch, status, sortBy, reverse, branchId]);
+
+  const params = useMemo(
+    () => ({
+      page,
+      per_page: PER_PAGE,
+      branchId: branchId ?? undefined,
+      search: debouncedSearch || undefined,
+      status: status || undefined,
+      sort_by: sortBy === "newest" ? undefined : sortBy,
+      reverse: reverse || undefined,
+    }),
+    [page, branchId, debouncedSearch, status, sortBy, reverse]
+  );
+
+  const { data, isFetching, error } = useGetUsersPageQuery(params);
+  const users = data?.data ?? [];
   const [updateStatus, { isLoading: isUpdating }] = useUpdateUserStatusMutation();
   const [resetMpin, { isLoading: isResetting }] = useResetUserMpinMutation();
   const [moveBranch, { isLoading: isMoving }] = useMoveUserBranchMutation();
@@ -196,27 +218,36 @@ export default function UsersPage() {
   return (
     <SuperShell
       title="Users"
-      subtitle={`${branch?.name ?? "All branches"} · ${users.length} shown`}
+      subtitle={`${branch?.name ?? "All branches"} · ${data?.meta?.total ?? users.length} users`}
     >
       <div className="space-y-4">
         <Card>
-          <div className="grid gap-3 sm:grid-cols-2">
+          {/* The branch is chosen once, in the header (the subtitle names it).
+              sm: search | status, sort underneath; lg: one row with sort widest. */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Input
               label="Search"
               placeholder="Name, phone, play ID"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            {/* Read-only: the branch is chosen once, in the header, for the whole panel. */}
-            <div className="min-w-0">
-              <span className="mb-1.5 block text-xs font-medium text-muted">Branch</span>
-              <p className="flex h-11 min-w-0 items-center rounded-md border border-dashed border-border px-3.5 text-sm text-text">
-                <span className="truncate">{branch?.name ?? "All branches"}</span>
-              </p>
-              {branches.length > 1 ? (
-                <span className="mt-1.5 block text-xs text-faint">Switch it from the branch picker at the top.</span>
-              ) : null}
-            </div>
+            <Segmented
+              label="Status"
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: "", label: "All" },
+                { value: "active", label: "Active" },
+                { value: "banned", label: "Banned" },
+              ]}
+            />
+            <UserSortControl
+              value={sortBy}
+              reversed={reverse}
+              onChange={setSortBy}
+              onReverse={() => setReverse((value) => !value)}
+              className="sm:col-span-2"
+            />
           </div>
         </Card>
 
@@ -234,6 +265,8 @@ export default function UsersPage() {
           emptyTitle="No users match this search"
           emptyBody="Clear the search, or switch the branch in the header."
         />
+
+        <Pagination meta={data?.meta} page={page} onPage={setPage} />
       </div>
     </SuperShell>
   );

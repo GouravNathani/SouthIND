@@ -36,7 +36,7 @@ export default function DepositPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, filters.status, filters.timeframe, filters.customStart, filters.customEnd]);
+  }, [debouncedSearch, filters.status, filters.timeframe, filters.customStart, filters.customEnd, filters.reverse]);
 
   const params = useMemo(
     () => ({
@@ -45,8 +45,9 @@ export default function DepositPage() {
       search: debouncedSearch || undefined,
       status: filters.status || undefined,
       ...rangeParams(filters.timeframe, { start: filters.customStart, end: filters.customEnd }),
+      reverse: filters.reverse || undefined,
     }),
-    [page, debouncedSearch, filters.status, filters.timeframe, filters.customStart, filters.customEnd]
+    [page, debouncedSearch, filters.status, filters.timeframe, filters.customStart, filters.customEnd, filters.reverse]
   );
 
   const { data, isFetching, error, refetch } = useGetDepositsPageQuery(params, {

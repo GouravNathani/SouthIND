@@ -152,6 +152,13 @@ export const IconFilter = ({ size = 18 }: P) => (
   <svg {...base(size)}><path d="M3 5h18" /><path d="M6.5 12h11" /><path d="M10 19h4" /></svg>
 );
 
+/** Up and down arrows: reverse a list's order. */
+export const IconSortSwap = ({ size = 18 }: P) => (
+  <svg {...base(size)}>
+    <path d="M7 20V4" /><path d="m3.5 7.5 3.5-3.5 3.5 3.5" /><path d="M17 4v16" /><path d="m13.5 16.5 3.5 3.5 3.5-3.5" />
+  </svg>
+);
+
 export const IconRefresh = ({ size = 18 }: P) => (
   <svg {...base(size)}><path d="M20 11a8 8 0 1 0-1.5 5.5" /><path d="M20 5v6h-6" /></svg>
 );
