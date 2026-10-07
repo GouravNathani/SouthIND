@@ -24,6 +24,10 @@ class BranchResource extends JsonResource
             // Agent (referral) programme switch — the same flag the Agent page
             // toggles, surfaced here so the owner can flip it per branch.
             'agent_enabled' => (bool) ($this->referralSetting?->enabled ?? false),
+            // The branch's WhatsApp numbers from its app settings: the deposit and
+            // withdrawal queues share a request to these.
+            'deposit_wa' => $this->appSetting?->deposit_wa,
+            'withdrawal_wa' => $this->appSetting?->withdrawal_wa,
             'admins_count' => $this->admins_count,
             'users_count' => $this->users_count,
             'created_at' => $this->created_at,

@@ -21,7 +21,7 @@ class BranchController extends Controller
     public function index()
     {
         $branches = Branch::query()
-            ->with('referralSetting')
+            ->with(['referralSetting', 'appSetting'])
             ->withCount(['admins', 'users'])
             ->orderBy('created_at', 'desc')
             ->get();
