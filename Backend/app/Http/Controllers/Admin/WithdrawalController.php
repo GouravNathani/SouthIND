@@ -186,11 +186,15 @@ class WithdrawalController extends Controller
 
         $data = $request->validated();
 
-        $payload = [
-            'status' => $data['status'],
-            'processed_by' => $request->user()->id,
-            'processed_at' => now(),
-        ];
+        // "In progress" only marks the request as being worked on, not a
+        // decision, so it leaves the decided-by / decided-at fields empty.
+        $payload = $data['status'] === Withdrawal::STATUS_ON_PROCESS
+            ? ['status' => $data['status']]
+            : [
+                'status' => $data['status'],
+                'processed_by' => $request->user()->id,
+                'processed_at' => now(),
+            ];
 
         if (array_key_exists('notes', $data)) {
             $payload['notes'] = $data['notes'];

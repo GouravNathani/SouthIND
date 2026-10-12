@@ -163,11 +163,18 @@ class DepositController extends Controller
 
         $data = $request->validated();
 
-        $payload = [
-            'status' => $data['status'],
-            'approved_by' => $request->user()->id,
-            'approved_at' => now(),
-        ];
+        // "In progress" only marks the request as being worked on. It is not a
+        // decision: no decided time, and the bonus code / commission / account
+        // limit handling below waits for the real approve or reject.
+        $inProgress = $data['status'] === Deposit::STATUS_ON_PROCESS;
+
+        $payload = $inProgress
+            ? ['status' => $data['status']]
+            : [
+                'status' => $data['status'],
+                'approved_by' => $request->user()->id,
+                'approved_at' => now(),
+            ];
 
         if (array_key_exists('notes', $data)) {
             $payload['notes'] = $data['notes'];
@@ -177,6 +184,14 @@ class DepositController extends Controller
         // both passed the check above, and every side effect below ran twice.
         if (!StatusTransition::claim($deposit, [Deposit::STATUS_PENDING, Deposit::STATUS_ON_PROCESS], $payload)) {
             return response()->json(['message' => 'Only pending or in-process deposits can be updated.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if ($inProgress) {
+            DepositCache::forgetForPlay($deposit->user_id ? 'user:' . $deposit->user_id : null);
+            DepositCache::forgetForPlay($deposit->play_id);
+            DepositCache::flushAdmin();
+
+            return new DepositResource($deposit->refresh()->load(['user', 'account', 'approver', 'bonusRedemption']));
         }
 
         // Unlock (or release) a bonus code applied on the deposit form.
