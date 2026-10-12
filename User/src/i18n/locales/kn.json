@@ -145,7 +145,8 @@
       "all": "ಎಲ್ಲಾ",
       "pending": "ಬಾಕಿ",
       "approved": "ಅನುಮೋದಿತ",
-      "rejected": "ತಿರಸ್ಕೃತ"
+      "rejected": "ತಿರಸ್ಕೃತ",
+      "on_process": "ಪ್ರಕ್ರಿಯೆಯಲ್ಲಿದೆ"
     }
   },
   "winner": {

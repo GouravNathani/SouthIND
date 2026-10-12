@@ -6,7 +6,7 @@ import QuickNotes from "@/components/QuickNotes";
 import WhatsAppShare from "@/components/WhatsAppShare";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import Badge, { statusTone } from "@/components/ui/Badge";
+import Badge, { statusLabel, statusTone } from "@/components/ui/Badge";
 import { Textarea } from "@/components/ui/Field";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { IconBack } from "@/components/icons";
@@ -39,12 +39,15 @@ export default function WithdrawUpdatePage() {
     [withdrawals, withdrawalId]
   );
 
-  const decide = async (status: "approved" | "rejected") => {
+  const current = (withdrawal?.status ?? "").toLowerCase();
+
+  const decide = async (status: "approved" | "rejected" | "on_process") => {
     if (!withdrawal) return;
     setFormError(null);
     try {
       await updateStatus({ id: withdrawal.id, status, notes: notes.trim() || undefined }).unwrap();
-      navigate("/withdraw");
+      // In progress is not a decision: stay here to finish the request.
+      if (status !== "on_process") navigate("/withdraw");
     } catch (err) {
       setFormError(resolveErrorMessage(err, "Could not update this withdrawal."));
     }
@@ -96,7 +99,7 @@ export default function WithdrawUpdatePage() {
               <p className="text-xs text-muted">Amount</p>
               <p className="tabular text-2xl font-semibold break-words text-accent sm:text-3xl">{money(withdrawal.amount)}</p>
             </div>
-            <Badge tone={statusTone(withdrawal.status)}>{withdrawal.status}</Badge>
+            <Badge tone={statusTone(withdrawal.status)}>{statusLabel(withdrawal.status)}</Badge>
           </div>
 
           {/* Payout target first: this is what gets typed into the banking app,
@@ -149,6 +152,9 @@ export default function WithdrawUpdatePage() {
         <Card className="min-w-0">
           <CardTitle>Decision</CardTitle>
           <div className="space-y-3">
+            {current === "on_process" ? (
+              <p className="text-sm text-muted">In progress. Approve or reject once it is paid or checked.</p>
+            ) : null}
             <Textarea
               label="Note to the user"
               rows={3}
@@ -172,6 +178,16 @@ export default function WithdrawUpdatePage() {
               >
                 Reject
               </Button>
+              {current === "pending" ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  loading={isSaving}
+                  onClick={() => void decide("on_process")}
+                >
+                  In progress
+                </Button>
+              ) : null}
             </div>
           </div>
         </Card>

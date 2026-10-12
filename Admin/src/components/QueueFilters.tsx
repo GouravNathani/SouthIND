@@ -5,12 +5,13 @@ import { Input, Select } from "@/components/ui/Field";
 import Segmented from "@/components/ui/Segmented";
 import { TIMEFRAMES, type TimeframeId } from "@/utils/timeframe";
 
-export const STATUS_OPTIONS = ["", "pending", "approved", "rejected"] as const;
+export const STATUS_OPTIONS = ["", "pending", "on_process", "approved", "rejected"] as const;
 export type StatusFilter = (typeof STATUS_OPTIONS)[number];
 
 const STATUS_CHOICES = [
   { value: "", label: "All" },
   { value: "pending", label: "Pending" },
+  { value: "on_process", label: "In progress" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
 ] as const satisfies readonly { value: StatusFilter; label: string }[];
@@ -73,6 +74,7 @@ export default function QueueFilters({
             value={value.status}
             onChange={(status) => patch({ status })}
             options={STATUS_CHOICES}
+            breakAfter={3}
             className="flex-1"
           />
           <ReverseOrderButton reversed={value.reverse} onToggle={() => patch({ reverse: !value.reverse })} />

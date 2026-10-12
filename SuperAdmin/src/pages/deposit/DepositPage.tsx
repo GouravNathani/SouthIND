@@ -6,7 +6,7 @@ import WhatsAppShare from "@/components/WhatsAppShare";
 import QueueFilters, { EMPTY_FILTERS, type QueueFilterState } from "@/components/QueueFilters";
 import Pagination from "@/components/Pagination";
 import DataTable, { type Column } from "@/components/ui/DataTable";
-import Badge, { statusTone } from "@/components/ui/Badge";
+import Badge, { statusLabel, statusTone } from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { IconRefresh } from "@/components/icons";
@@ -17,7 +17,7 @@ import { resolveErrorMessage } from "@/utils/errors";
 import { formatDateTime } from "@/utils/dateTime";
 import { money } from "@/utils/format";
 import { rangeParams } from "@/utils/timeframe";
-import { depositShareMessage } from "@/utils/whatsapp";
+import { depositShareImage, depositShareMessage } from "@/utils/whatsapp";
 
 const PER_PAGE = 25;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -80,7 +80,7 @@ export default function DepositPage() {
       header: "Amount",
       render: (row) => <span className="tabular font-semibold">{money(row.amount)}</span>,
     },
-    { key: "status", header: "Status", render: (row) => <Badge tone={statusTone(row.status)}>{row.status}</Badge> },
+    { key: "status", header: "Status", render: (row) => <Badge tone={statusTone(row.status)}>{statusLabel(row.status)}</Badge> },
     {
       key: "utr",
       header: "UTR",
@@ -106,6 +106,7 @@ export default function DepositPage() {
         <WhatsAppShare
           number={branches.find((entry) => entry.id === row.branch_id)?.deposit_wa}
           message={depositShareMessage(row)}
+          image={depositShareImage(row)}
         />
       ),
     },

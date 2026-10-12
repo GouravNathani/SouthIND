@@ -6,7 +6,7 @@ import QuickNotes from "@/components/QuickNotes";
 import WhatsAppShare from "@/components/WhatsAppShare";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import Badge, { statusTone } from "@/components/ui/Badge";
+import Badge, { statusLabel, statusTone } from "@/components/ui/Badge";
 import { Textarea } from "@/components/ui/Field";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { IconBack } from "@/components/icons";
@@ -20,7 +20,7 @@ import { resolveErrorMessage } from "@/utils/errors";
 import { formatDateTime, formatDuration } from "@/utils/dateTime";
 import { resolveUploadUrl } from "@/utils/receipt";
 import { money } from "@/utils/format";
-import { depositShareMessage, npciAddress } from "@/utils/whatsapp";
+import { depositShareImage, depositShareMessage, npciAddress } from "@/utils/whatsapp";
 
 export default function DepositUpdatePage() {
   const navigate = useNavigate();
@@ -41,14 +41,17 @@ export default function DepositUpdatePage() {
   );
 
   const receiptUrl = resolveUploadUrl(deposit?.receipt_image_url ?? deposit?.receipt_image_path);
-  const decided = (deposit?.status ?? "").toLowerCase() !== "pending";
+  const current = (deposit?.status ?? "").toLowerCase();
+  const inProgress = current === "on_process";
+  const decided = current !== "pending" && !inProgress;
 
-  const decide = async (status: "approved" | "rejected") => {
+  const decide = async (status: "approved" | "rejected" | "on_process") => {
     if (!deposit) return;
     setFormError(null);
     try {
       await updateStatus({ id: deposit.id, status, notes: notes.trim() || undefined }).unwrap();
-      navigate("/deposit");
+      // In progress is not a decision: stay here to finish the request.
+      if (status !== "on_process") navigate("/deposit");
     } catch (err) {
       setFormError(resolveErrorMessage(err, "Could not update this deposit."));
     }
@@ -96,7 +99,7 @@ export default function DepositUpdatePage() {
                 <p className="text-xs text-muted">Amount</p>
                 <p className="tabular text-2xl font-semibold break-words text-accent sm:text-3xl">{money(deposit.amount)}</p>
               </div>
-              <Badge tone={statusTone(deposit.status)}>{deposit.status}</Badge>
+              <Badge tone={statusTone(deposit.status)}>{statusLabel(deposit.status)}</Badge>
             </div>
 
             {deposit.bonus ? (
@@ -122,6 +125,7 @@ export default function DepositUpdatePage() {
               <WhatsAppShare
                 number={appSettings?.deposit_wa}
                 message={depositShareMessage(deposit)}
+                image={depositShareImage(deposit)}
                 label="Share on WhatsApp"
               />
             </div>
@@ -160,6 +164,9 @@ export default function DepositUpdatePage() {
                 allows it.
               </p>
             ) : null}
+            {inProgress ? (
+              <p className="text-sm text-muted">In progress. Approve or reject once it is checked.</p>
+            ) : null}
 
             <form
               className="mt-3 space-y-3"
@@ -190,6 +197,16 @@ export default function DepositUpdatePage() {
                 >
                   Reject
                 </Button>
+                {current === "pending" ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    loading={isSaving}
+                    onClick={() => void decide("on_process")}
+                  >
+                    In progress
+                  </Button>
+                ) : null}
               </div>
             </form>
           </Card>

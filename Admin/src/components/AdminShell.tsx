@@ -59,7 +59,9 @@ export const NAV: NavEntry[] = [
 
 const TABS = NAV.filter((entry) => entry.tab);
 
-const isPending = (status?: string | null) => (status ?? "").toLowerCase() === "pending";
+/** Still waiting for a decision: new, or marked in progress. */
+const isPending = (status?: string | null) =>
+  ["pending", "on_process"].includes((status ?? "").toLowerCase());
 
 /**
  * Admin chrome. Unlike the User app's rail this sidebar is always expanded on

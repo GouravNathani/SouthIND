@@ -145,7 +145,8 @@
       "all": "All",
       "pending": "Pending",
       "approved": "Approved",
-      "rejected": "Rejected"
+      "rejected": "Rejected",
+      "on_process": "In progress"
     }
   },
   "winner": {

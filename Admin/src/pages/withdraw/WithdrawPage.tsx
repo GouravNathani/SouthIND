@@ -5,7 +5,7 @@ import WhatsAppShare from "@/components/WhatsAppShare";
 import QueueFilters, { EMPTY_FILTERS, type QueueFilterState } from "@/components/QueueFilters";
 import Pagination from "@/components/Pagination";
 import DataTable, { type Column } from "@/components/ui/DataTable";
-import Badge, { statusTone } from "@/components/ui/Badge";
+import Badge, { statusLabel, statusTone } from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { IconRefresh } from "@/components/icons";
@@ -88,7 +88,7 @@ export default function WithdrawPage() {
       header: "To",
       render: (row) => <span className="tabular block truncate">{destinationOf(row)}</span>,
     },
-    { key: "status", header: "Status", render: (row) => <Badge tone={statusTone(row.status)}>{row.status}</Badge> },
+    { key: "status", header: "Status", render: (row) => <Badge tone={statusTone(row.status)}>{statusLabel(row.status)}</Badge> },
     {
       key: "created",
       header: "Requested",

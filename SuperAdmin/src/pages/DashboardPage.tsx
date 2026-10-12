@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import SuperShell from "@/components/SuperShell";
 import { useBranch } from "@/components/BranchContext";
 import Card, { CardTitle } from "@/components/ui/Card";
-import Badge, { statusTone } from "@/components/ui/Badge";
+import Badge, { statusLabel, statusTone } from "@/components/ui/Badge";
 import { ErrorNote, Skeleton } from "@/components/ui/Feedback";
 import { Input } from "@/components/ui/Field";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -28,7 +28,9 @@ const readStoredTimeframe = (): TimeframeId => {
   return TIMEFRAMES.some((option) => option.id === stored) ? (stored as TimeframeId) : "today";
 };
 
-const isPending = (status?: string | null) => (status ?? "").toLowerCase() === "pending";
+/** Still waiting for a decision: new, or marked in progress. */
+const isPending = (status?: string | null) =>
+  ["pending", "on_process"].includes((status ?? "").toLowerCase());
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -276,7 +278,7 @@ function PendingCard({
                   <p className="tabular truncate text-sm font-semibold">{money(row.amount)}</p>
                   <p className="truncate text-xs text-faint">{formatDateTime(row.created_at)}</p>
                 </div>
-                <Badge tone={statusTone(row.status)}>{row.status}</Badge>
+                <Badge tone={statusTone(row.status)}>{statusLabel(row.status)}</Badge>
               </button>
             </li>
           ))}

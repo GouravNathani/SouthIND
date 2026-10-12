@@ -74,7 +74,9 @@ export const NAV: NavEntry[] = [
 const GROUPS = ["Operate", "Network", "Money", "Configure"] as const;
 const TABS = NAV.filter((entry) => entry.tab);
 
-const isPending = (status?: string | null) => (status ?? "").toLowerCase() === "pending";
+/** Still waiting for a decision: new, or marked in progress. */
+const isPending = (status?: string | null) =>
+  ["pending", "on_process"].includes((status ?? "").toLowerCase());
 
 /**
  * Super admin chrome. Same skeleton as the branch panel, three things different:

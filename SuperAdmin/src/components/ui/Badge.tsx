@@ -18,8 +18,13 @@ export const statusTone = (status?: string | null): Tone => {
   if (["rejected", "failed", "cancelled", "canceled", "void", "suspended", "banned"].includes(value))
     return "neg";
   if (["pending", "processing", "awaiting_deposit", "in_review"].includes(value)) return "warn";
+  if (value === "on_process") return "info";
   return "neutral";
 };
+
+/** Display text for a status; "on_process" would otherwise show as "On_process". */
+export const statusLabel = (status?: string | null): string =>
+  (status ?? "").toLowerCase() === "on_process" ? "In progress" : (status ?? "");
 
 export default function Badge({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
   return (

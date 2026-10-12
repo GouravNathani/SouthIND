@@ -24,6 +24,14 @@ const FILTERS: FilterKey[] = ["all", "pending", "approved", "rejected"];
 
 const normalizeStatus = (status?: string | null) => (status ?? "").toLowerCase();
 
+/** "Pending" is everything not decided yet, including requests an admin marked in progress. */
+const matchesFilter = (status: string | null | undefined, filter: FilterKey) => {
+  const value = normalizeStatus(status);
+  if (filter === "all") return true;
+  if (filter === "pending") return value === "pending" || value === "on_process";
+  return value === filter;
+};
+
 const byCreatedAtDesc = <T extends { created_at: string }>(a: T, b: T) =>
   Date.parse(b.created_at) - Date.parse(a.created_at);
 
@@ -53,7 +61,7 @@ export default function HistoryPage() {
 
     return [...unique.values()]
       .sort(byCreatedAtDesc)
-      .filter((record) => filter === "all" || normalizeStatus(record.status) === filter);
+      .filter((record) => matchesFilter(record.status, filter));
   }, [depositsQuery.data, withdrawalsQuery.data, tab, filter]);
 
   const query = tab === "deposit" ? depositsQuery : withdrawalsQuery;
