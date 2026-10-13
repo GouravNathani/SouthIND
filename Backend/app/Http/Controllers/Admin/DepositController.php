@@ -14,6 +14,7 @@ use App\Support\Push\UserPushNotifier;
 use App\Support\Query\DurationAggregate;
 use App\Support\Referral\CommissionAccrual;
 use App\Support\ResolvesBranch;
+use App\Support\WaHub\WaHubNotifier;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -257,6 +258,9 @@ class DepositController extends Controller
         } catch (\Throwable $e) {
             Log::warning('User push after deposit status failed.', ['error' => $e->getMessage()]);
         }
+
+        // WhatsApp to the user (queued; never throws).
+        WaHubNotifier::depositStatus($deposit, $request->user());
 
         // Clear user cache (new keying) and legacy play_id cache to avoid stale data
         DepositCache::forgetForPlay($deposit->user_id ? 'user:' . $deposit->user_id : null);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\ResolvesBranch;
+use App\Support\WaHub\WaHubNotifier;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -25,6 +26,9 @@ class UserMpinController extends Controller
             'mpin_failed_attempts' => 0,
             'mpin_locked_at' => null,
         ]);
+
+        // WhatsApp the new MPIN to the user (queued; never throws).
+        WaHubNotifier::mpinReset($user, request()->user());
 
         return response()->json([
             'message' => 'MPIN generated successfully.',

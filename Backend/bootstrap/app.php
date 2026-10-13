@@ -11,6 +11,13 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        // WA Hub routes live in their own file, under the same `api` prefix and
+        // middleware group as routes/api.php.
+        then: function () {
+            \Illuminate\Support\Facades\Route::middleware('api')
+                ->prefix('api')
+                ->group(__DIR__.'/../routes/wa_hub.php');
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
@@ -23,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'staff' => \App\Http\Middleware\EnsureStaff::class,
             'user-panel-open' => \App\Http\Middleware\EnsureUserPanelAvailable::class,
             'support-chat-on' => \App\Http\Middleware\EnsureSupportChatEnabled::class,
+            'wa-hub-on' => \App\Http\Middleware\EnsureWaHubEnabled::class,
             // HMAC gate for server-to-server calls from BookFlowControl.
             'wallet-hmac' => \App\Http\Middleware\VerifyWalletHmac::class,
         ]);

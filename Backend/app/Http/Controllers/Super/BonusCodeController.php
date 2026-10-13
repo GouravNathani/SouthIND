@@ -12,6 +12,7 @@ use App\Models\BonusCodeRedemption;
 use App\Models\Tag;
 use App\Support\Bonus\BonusCodeGenerator;
 use App\Support\Push\UserPushNotifier;
+use App\Support\WaHub\WaHubNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -197,6 +198,9 @@ class BonusCodeController extends Controller
             } catch (\Throwable $e) {
                 Log::warning('Bonus approval push failed.', ['error' => $e->getMessage()]);
             }
+
+            // WhatsApp to the user (queued; never throws).
+            WaHubNotifier::bonusApproved($redemption, $request->user());
         }
 
         return new BonusRedemptionResource($redemption->load(['user', 'fulfiller']));

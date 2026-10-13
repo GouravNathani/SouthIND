@@ -12,6 +12,7 @@ use App\Models\Deposit;
 use App\Models\User;
 use App\Models\Withdrawal;
 use App\Support\Query\UserListOrder;
+use App\Support\WaHub\WaHubNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -158,6 +159,9 @@ class UserManagementController extends Controller
             );
         }
 
+        // WhatsApp welcome with the login details (queued; never throws).
+        WaHubNotifier::userWelcome($user, $request->user());
+
         $payload = [
             'message' => 'User created successfully.',
             'user' => new UserResource($user->refresh()->load('branch')),
@@ -234,6 +238,9 @@ class UserManagementController extends Controller
             'mpin_failed_attempts' => 0,
             'mpin_locked_at' => null,
         ]);
+
+        // WhatsApp the new MPIN to the user (queued; never throws).
+        WaHubNotifier::mpinReset($user, request()->user());
 
         return response()->json([
             'message' => 'MPIN generated successfully.',

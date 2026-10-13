@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Withdrawal;
 use App\Support\ResolvesBranch;
 use App\Support\Query\UserListOrder;
+use App\Support\WaHub\WaHubNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -161,6 +162,9 @@ class UserController extends Controller
         if ($agentId) {
             $warning = $this->attachToAgent($user, (int) $agentId, $branchId, (int) $request->user()->id, $warning);
         }
+
+        // WhatsApp welcome with the login details (queued; never throws).
+        WaHubNotifier::userWelcome($user, $request->user());
 
         $payload = [
             'message' => 'User created successfully.',

@@ -31,6 +31,9 @@ class GlobalSettingController extends Controller
         if (!Schema::hasColumn('global_settings', 'support_chat_enabled')) {
             unset($payload['support_chat_enabled']);
         }
+        if (!Schema::hasColumn('global_settings', 'wa_hub_enabled')) {
+            unset($payload['wa_hub_enabled']);
+        }
 
         $setting = GlobalSetting::query()->latest('id')->first();
 

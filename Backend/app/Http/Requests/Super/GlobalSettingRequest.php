@@ -21,6 +21,7 @@ class GlobalSettingRequest extends FormRequest
             'user_panel_maintenance_enabled' => ['sometimes', 'boolean'],
             'bonus_deposit_enabled' => ['sometimes', 'boolean'],
             'support_chat_enabled' => ['sometimes', 'boolean'],
+            'wa_hub_enabled' => ['sometimes', 'boolean'],
         ];
     }
 }
