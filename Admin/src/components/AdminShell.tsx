@@ -10,6 +10,8 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useSupportChatEnabled } from "@/hooks/useSupportChatEnabled";
 import { useWaHubEnabled } from "@/hooks/useWaHubEnabled";
 import { BrandMark } from "@/components/Brand";
+import { BUILD_VERSION } from "@/config/env";
+import { formatDateTime } from "@/utils/dateTime";
 import {
   IconAccounts,
   IconBanner,
@@ -32,6 +34,17 @@ import {
 
 const TOKEN_KEY = "sind-admin-token";
 const QUEUE_POLL_MS = 30000;
+
+// BUILD_VERSION is "<package version>-<UTC yyyymmddhhmmss>" (vite.config.ts). Show the
+// build time in IST under Log out so staff can tell when a new build has landed.
+const BUILD_LABEL = (() => {
+  const match = BUILD_VERSION.match(/^(.+)-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/);
+  if (!match) {
+    return BUILD_VERSION;
+  }
+  const [, version, y, mo, d, h, mi, s] = match;
+  return `${version} · ${formatDateTime(new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s)))}`;
+})();
 
 type NavEntry = {
   to: string;
@@ -204,6 +217,9 @@ export default function AdminShell({
         </span>
         <span className="truncate">Log out</span>
       </button>
+      <p className="truncate px-3 pt-0.5 text-[11px] text-muted" title={BUILD_VERSION}>
+        Version {BUILD_LABEL}
+      </p>
     </div>
   );
 
