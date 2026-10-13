@@ -23,6 +23,18 @@ import {
 import { getApiErrorMessage } from "@/utils/apiError";
 import { clearAuthToken, getStoredUser } from "@/utils/auth";
 import { dateTime, money, toNumber } from "@/utils/format";
+import { BUILD_VERSION } from "@/config/env";
+
+// BUILD_VERSION is "<package version>-<UTC yyyymmddhhmmss>" (vite.config.ts). Show the
+// build time under Log out so a new build is easy to spot.
+const BUILD_LABEL = (() => {
+  const match = BUILD_VERSION.match(/^(.+)-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/);
+  if (!match) {
+    return BUILD_VERSION;
+  }
+  const [, version, y, mo, d, h, mi, s] = match;
+  return `${version} · ${dateTime(`${y}-${mo}-${d}T${h}:${mi}:${s}Z`)}`;
+})();
 
 export default function AccountPage() {
   const { t } = useTranslation();
@@ -84,6 +96,9 @@ export default function AccountPage() {
           <Button variant="secondary" block loading={loggingOut} onClick={handleLogout}>
             {t("account.logout")}
           </Button>
+          <p className="mt-2 truncate text-center text-[11px] text-muted" title={BUILD_VERSION}>
+            Version {BUILD_LABEL}
+          </p>
         </Card>
       </div>
     </AppShell>
