@@ -65,3 +65,15 @@ export const isSupportChatOffError = (error: unknown): boolean => {
     (typed.data as { code?: string } | undefined)?.code === "support_chat_disabled"
   );
 };
+
+/** The API refused a WhatsApp Hub call because the super admin switched it off. */
+export const isWaHubOffError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const typed = error as FetchBaseQueryError;
+  return (
+    typed.status === 403 &&
+    (typed.data as { code?: string } | undefined)?.code === "wa_hub_disabled"
+  );
+};

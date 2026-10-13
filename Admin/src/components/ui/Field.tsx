@@ -1,4 +1,10 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type {
+  InputHTMLAttributes,
+  ReactNode,
+  Ref,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from "react";
 import { IconChevronDown } from "@/components/icons";
 
 // One focus treatment for every control: the accent border plus a soft halo.
@@ -67,10 +73,15 @@ export function Textarea({
   label?: string;
   hint?: ReactNode;
   error?: string | null;
+  /** React 19 passes ref as a prop; callers that insert at the cursor need it. */
+  ref?: Ref<HTMLTextAreaElement>;
 }) {
   return (
     <Shell label={label} hint={hint} error={error}>
-      <textarea {...rest} className={[CONTROL, "resize-none py-3", className].join(" ")} />
+      <textarea
+        {...rest}
+        className={[CONTROL, "resize-none py-3", error ? "border-neg" : "", className].join(" ")}
+      />
     </Shell>
   );
 }

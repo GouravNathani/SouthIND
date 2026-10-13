@@ -53,3 +53,15 @@ export const isUnauthorizedError = (error: unknown): boolean => {
   const typed = error as FetchBaseQueryError;
   return typed.status === 401;
 };
+
+/** The API refused a WhatsApp Hub call because the hub is switched off globally. */
+export const isWaHubOffError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const typed = error as FetchBaseQueryError;
+  return (
+    typed.status === 403 &&
+    (typed.data as { code?: string } | undefined)?.code === "wa_hub_disabled"
+  );
+};

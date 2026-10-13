@@ -5,7 +5,7 @@ import type {
   FetchBaseQueryError,
 } from "@reduxjs/toolkit/query";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { isSupportChatOffError } from "../utils/errors";
+import { isSupportChatOffError, isWaHubOffError } from "../utils/errors";
 import { withInFlightDedup } from "./dedupeBaseQuery";
 
 import type {
@@ -48,6 +48,22 @@ import type {
   ReferralAudit,
   ReferralOverview,
   ReferralSettings,
+  WaAudience,
+  WaCampaign,
+  WaCampaignInput,
+  WaCampaignPreview,
+  WaConnection,
+  WaConnectionUpdate,
+  WaEvent,
+  WaEventUpdate,
+  WaMessage,
+  WaMessagesQuery,
+  WaPage,
+  WaPreview,
+  WaTemplate,
+  WaTemplateInput,
+  WaTemplatesResponse,
+  WaUsage,
 } from "../types/api";
 
 const TOKEN_KEY = "sind-admin-token";
@@ -180,6 +196,12 @@ export const api = createApi({
     "CommissionEntries",
     "CommissionPayouts",
     "ReferralAudits",
+    "WaConnection",
+    "WaEvents",
+    "WaTemplates",
+    "WaCampaigns",
+    "WaMessages",
+    "WaUsage",
   ],
   endpoints: (builder) => ({
     login: builder.mutation<{ token: string }, Credentials>({
@@ -1107,6 +1129,127 @@ export const api = createApi({
       query: (params) => ({ url: "/referral/audits", params: params ?? undefined }),
       providesTags: [{ type: "ReferralAudits", id: "LIST" }],
     }),
+
+    // ── WhatsApp Hub ────────────────────────────────────────────────────────
+    getWaConnection: builder.query<WaConnection, void>({
+      query: () => "/wa/connection",
+      transformResponse: (response: unknown) => unwrapObject<WaConnection>(response, "status"),
+      providesTags: ["WaConnection"],
+      onQueryStarted: (_arg, { dispatch, queryFulfilled }) =>
+        markWaHubOffOnRefusal(queryFulfilled, dispatch),
+    }),
+    // Link / unlink / save all answer with the connection itself; it goes
+    // straight into the cache so the QR (and its 2 s polling) shows at once.
+    linkWaConnection: builder.mutation<WaConnection, void>({
+      query: () => ({ url: "/wa/connection/link", method: "POST", body: {} }),
+      transformResponse: (response: unknown) => unwrapObject<WaConnection>(response, "status"),
+      onQueryStarted: (_arg, { dispatch, queryFulfilled }) =>
+        storeWaConnection(queryFulfilled, dispatch),
+    }),
+    unlinkWaConnection: builder.mutation<WaConnection, void>({
+      query: () => ({ url: "/wa/connection/unlink", method: "POST", body: {} }),
+      transformResponse: (response: unknown) => unwrapObject<WaConnection>(response, "status"),
+      onQueryStarted: (_arg, { dispatch, queryFulfilled }) =>
+        storeWaConnection(queryFulfilled, dispatch),
+    }),
+    updateWaConnection: builder.mutation<WaConnection, WaConnectionUpdate>({
+      query: (body) => ({ url: "/wa/connection", method: "PUT", body }),
+      transformResponse: (response: unknown) => unwrapObject<WaConnection>(response, "status"),
+      onQueryStarted: (_arg, { dispatch, queryFulfilled }) =>
+        storeWaConnection(queryFulfilled, dispatch),
+    }),
+    sendWaTest: builder.mutation<{ message: WaMessage }, { to?: string; text: string }>({
+      query: (body) => ({ url: "/wa/test", method: "POST", body }),
+      invalidatesTags: ["WaMessages", "WaConnection", "WaUsage"],
+    }),
+    getWaEvents: builder.query<WaEvent[], void>({
+      query: () => "/wa/events",
+      transformResponse: (response: unknown) => unwrapList<WaEvent>(response, "events"),
+      providesTags: ["WaEvents"],
+    }),
+    updateWaEvent: builder.mutation<WaEvent, { event: string; body: WaEventUpdate }>({
+      query: ({ event, body }) => ({
+        url: `/wa/events/${encodeURIComponent(event)}`,
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => unwrapObject<WaEvent>(response, "key"),
+      // Patch the one row in place: refetching all seven would reset the drafts
+      // open in the other editors.
+      onQueryStarted: async (_arg, { dispatch, queryFulfilled }) => {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            api.util.updateQueryData("getWaEvents", undefined, (draft) => {
+              const index = draft.findIndex((entry) => entry.key === data.key);
+              if (index !== -1) draft[index] = data;
+            }),
+          );
+        } catch {
+          /* the caller shows the error */
+        }
+      },
+    }),
+    previewWaEvent: builder.mutation<WaPreview, { event: string; body: string }>({
+      query: ({ event, body }) => ({
+        url: `/wa/events/${encodeURIComponent(event)}/preview`,
+        method: "POST",
+        body: { body },
+      }),
+    }),
+    getWaTemplates: builder.query<WaTemplatesResponse, void>({
+      query: () => "/wa/templates",
+      transformResponse: (response: unknown): WaTemplatesResponse => {
+        const payload = unwrapObject<Partial<WaTemplatesResponse> | null>(response, "templates");
+        return {
+          templates: Array.isArray(payload?.templates) ? payload.templates : [],
+          variables: Array.isArray(payload?.variables) ? payload.variables : [],
+        };
+      },
+      providesTags: ["WaTemplates"],
+    }),
+    createWaTemplate: builder.mutation<WaTemplate, WaTemplateInput>({
+      query: (body) => ({ url: "/wa/templates", method: "POST", body }),
+      transformResponse: (response: unknown) => unwrapObject<WaTemplate>(response, "id"),
+      invalidatesTags: ["WaTemplates"],
+    }),
+    updateWaTemplate: builder.mutation<WaTemplate, { id: number } & Partial<WaTemplateInput>>({
+      query: ({ id, ...body }) => ({ url: `/wa/templates/${id}`, method: "PUT", body }),
+      transformResponse: (response: unknown) => unwrapObject<WaTemplate>(response, "id"),
+      invalidatesTags: ["WaTemplates"],
+    }),
+    deleteWaTemplate: builder.mutation<{ ok: boolean }, number>({
+      query: (id) => ({ url: `/wa/templates/${id}`, method: "DELETE" }),
+      invalidatesTags: ["WaTemplates"],
+    }),
+    previewWaCampaign: builder.mutation<WaCampaignPreview, { audience: WaAudience }>({
+      query: (body) => ({ url: "/wa/campaigns/preview", method: "POST", body }),
+      transformResponse: (response: unknown) => unwrapObject<WaCampaignPreview>(response, "total"),
+    }),
+    createWaCampaign: builder.mutation<WaCampaign, WaCampaignInput>({
+      query: (body) => ({ url: "/wa/campaigns", method: "POST", body }),
+      transformResponse: (response: unknown) => unwrapObject<WaCampaign>(response, "id"),
+      invalidatesTags: ["WaCampaigns", "WaTemplates", "WaMessages"],
+    }),
+    getWaCampaigns: builder.query<WaPage<WaCampaign>, { page?: number; per_page?: number }>({
+      query: (params) => ({ url: "/wa/campaigns", params: compactParams(params) }),
+      transformResponse: (response: unknown) => toWaPage<WaCampaign>(response),
+      providesTags: ["WaCampaigns"],
+    }),
+    cancelWaCampaign: builder.mutation<WaCampaign, number>({
+      query: (id) => ({ url: `/wa/campaigns/${id}/cancel`, method: "POST", body: {} }),
+      invalidatesTags: ["WaCampaigns", "WaMessages"],
+    }),
+    getWaMessages: builder.query<WaPage<WaMessage>, WaMessagesQuery>({
+      query: (params) => ({ url: "/wa/messages", params: compactParams(params) }),
+      transformResponse: (response: unknown) => toWaPage<WaMessage>(response),
+      providesTags: ["WaMessages"],
+    }),
+    getWaUsage: builder.query<WaUsage, void>({
+      query: () => "/wa/usage",
+      transformResponse: (response: unknown) => unwrapObject<WaUsage>(response, "today"),
+      providesTags: ["WaUsage"],
+    }),
   }),
 });
 
@@ -1137,6 +1280,91 @@ function markSupportChatOff() {
       support_chat: false,
     };
   });
+}
+
+/**
+ * The backend passes the hub's JSON through. Tolerate a Laravel `{ data }`
+ * wrapper as well: unwrap only when the expected key is not at the top already.
+ */
+function unwrapObject<T>(payload: unknown, probeKey: string): T {
+  if (payload && typeof payload === "object" && !(probeKey in payload) && "data" in payload) {
+    const inner = (payload as { data?: unknown }).data;
+    if (inner && typeof inner === "object") return inner as T;
+  }
+  return payload as T;
+}
+
+function unwrapList<T>(payload: unknown, key: string): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    if (Array.isArray(record[key])) return record[key] as T[];
+    if (Array.isArray(record.data)) return record.data as T[];
+  }
+  return [];
+}
+
+function toWaPage<T>(payload: unknown): WaPage<T> {
+  const record = (payload && typeof payload === "object" ? payload : {}) as {
+    data?: unknown;
+    meta?: Partial<WaPage<T>["meta"]>;
+  };
+  const data = Array.isArray(record.data) ? (record.data as T[]) : [];
+  return {
+    data,
+    meta: {
+      total: Number(record.meta?.total ?? data.length),
+      page: Number(record.meta?.page ?? 1),
+      per_page: Number(record.meta?.per_page ?? (data.length || 25)),
+    },
+  };
+}
+
+/** Drops empty filters so the request only carries what the admin actually set. */
+function compactParams(params: object): Record<string, string | number> {
+  const out: Record<string, string | number> = {};
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    out[key] = value as string | number;
+  });
+  return out;
+}
+
+function storeWaConnection(
+  queryFulfilled: Promise<{ data: WaConnection }>,
+  dispatch: BaseQueryApi["dispatch"],
+): Promise<void> {
+  return queryFulfilled.then(
+    ({ data }) => {
+      dispatch(api.util.upsertQueryData("getWaConnection", undefined, data));
+    },
+    () => undefined,
+  );
+}
+
+/**
+ * Same idea as support chat: a 403 `wa_hub_disabled` means the super admin has
+ * switched the hub off, so the sidebar entry goes now, not at the next /me poll.
+ */
+function markWaHubOffOnRefusal(
+  queryFulfilled: Promise<unknown>,
+  dispatch: BaseQueryApi["dispatch"],
+): Promise<void> {
+  return queryFulfilled.then(
+    () => undefined,
+    (result: { error?: unknown } | undefined) => {
+      if (isWaHubOffError(result?.error)) {
+        dispatch(
+          api.util.updateQueryData("getCurrentUser", undefined, (draft) => {
+            draft.features = {
+              ...(draft.features as Record<string, unknown> | undefined),
+              wa_hub: false,
+            };
+          }),
+        );
+      }
+    },
+  );
 }
 
 export const {
@@ -1217,4 +1445,22 @@ export const {
   useAdvanceCommissionPayoutMutation,
   useProcessCommissionPayoutMutation,
   useGetReferralAuditsQuery,
+  useGetWaConnectionQuery,
+  useLinkWaConnectionMutation,
+  useUnlinkWaConnectionMutation,
+  useUpdateWaConnectionMutation,
+  useSendWaTestMutation,
+  useGetWaEventsQuery,
+  useUpdateWaEventMutation,
+  usePreviewWaEventMutation,
+  useGetWaTemplatesQuery,
+  useCreateWaTemplateMutation,
+  useUpdateWaTemplateMutation,
+  useDeleteWaTemplateMutation,
+  usePreviewWaCampaignMutation,
+  useCreateWaCampaignMutation,
+  useGetWaCampaignsQuery,
+  useCancelWaCampaignMutation,
+  useGetWaMessagesQuery,
+  useGetWaUsageQuery,
 } = api;

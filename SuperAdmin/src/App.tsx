@@ -16,6 +16,7 @@ import AccountDetailPage from "@/pages/accounts/AccountDetailPage";
 import WalletPage from "@/pages/WalletPage";
 import PayoutPage from "@/pages/PayoutPage";
 import WhatsAppAccountsPage from "@/pages/WhatsAppAccountsPage";
+import WaHubPage from "@/pages/wahub/WaHubPage";
 import BannerPage from "@/pages/banner/BannerPage";
 import BonusCodePage from "@/pages/bonus/BonusCodePage";
 import WinnerStreakPage from "@/pages/winner/WinnerStreakPage";
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/payout" element={<PayoutPage />} />
           <Route path="/whatsapp" element={<WhatsAppAccountsPage />} />
+          <Route path="/whatsapp-hub" element={<WaHubPage />} />
 
           <Route path="/banner" element={<BannerPage />} />
           <Route path="/bonus" element={<BonusCodePage />} />
