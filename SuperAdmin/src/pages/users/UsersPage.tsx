@@ -5,6 +5,7 @@ import { useBranch } from "@/components/BranchContext";
 import ClubBadge from "@/components/ClubBadge";
 import Pagination from "@/components/Pagination";
 import UserSortControl from "@/components/UserSortControl";
+import WaOptOutDialog from "@/components/wahub/WaOptOutDialog";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge, { statusTone } from "@/components/ui/Badge";
@@ -14,6 +15,7 @@ import Segmented from "@/components/ui/Segmented";
 import { IconChevronDown } from "@/components/icons";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
+import { useWaHubEnabled } from "@/hooks/useWaHubEnabled";
 import {
   useGetBranchClubsQuery,
   useGetUsersPageQuery,
@@ -35,6 +37,8 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("");
+  const waHubOn = useWaHubEnabled();
+  const [waUser, setWaUser] = useState<UserRecord | null>(null);
   const [sortBy, setSortBy] = useState<UserSort>("newest");
   const [reverse, setReverse] = useState(false);
   const [page, setPage] = useState(1);
@@ -220,6 +224,11 @@ export default function UsersPage() {
           <Button size="sm" variant="ghost" loading={isResetting} onClick={() => void regenerate(row)}>
             New MPIN
           </Button>
+          {waHubOn ? (
+            <Button size="sm" variant="ghost" onClick={() => setWaUser(row)}>
+              WhatsApp
+            </Button>
+          ) : null}
           <Button
             size="sm"
             variant={(row.status ?? "").toLowerCase() === "banned" ? "primary" : "secondary"}
@@ -300,6 +309,8 @@ export default function UsersPage() {
 
         <Pagination meta={data?.meta} page={page} onPage={setPage} />
       </div>
+
+      {waUser ? <WaOptOutDialog user={waUser} onClose={() => setWaUser(null)} /> : null}
     </SuperShell>
   );
 }

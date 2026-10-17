@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminShell from "@/components/AdminShell";
 import CopyRow from "@/components/CopyRow";
 import TagPicker from "@/components/TagPicker";
+import WaOptOutCard from "@/components/wahub/WaOptOutCard";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge, { statusTone } from "@/components/ui/Badge";
@@ -163,6 +164,8 @@ export default function UserDetailPage() {
             <CardTitle>Tags</CardTitle>
             <TagPicker userId={user.id} tags={user.tags} />
           </Card>
+
+          <WaOptOutCard userId={user.id} />
         </div>
 
         <div className="min-w-0 space-y-4">

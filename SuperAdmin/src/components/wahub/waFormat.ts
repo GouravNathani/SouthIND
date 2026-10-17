@@ -136,11 +136,11 @@ export const SKIP_REASONS: Record<string, string> = {
   event_off: "Event is off",
   not_connected: "WhatsApp not connected",
   disabled: "Branch paused",
-  opted_out: "User opted out",
+  opted_out: "Excluded from WhatsApp",
   bad_number: "Invalid number",
   no_whatsapp: "Not on WhatsApp",
   cap_reached: "Daily limit reached",
-  duplicate: "Already sent",
+  duplicate: "Already sent in 24 h",
   cancelled: "Cancelled",
 };
 

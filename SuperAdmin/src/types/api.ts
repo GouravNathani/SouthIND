@@ -1128,10 +1128,23 @@ export type WaPageMeta = { total: number; page: number; per_page: number };
 
 export type WaPage<T> = { data: T[]; meta: WaPageMeta };
 
+/** "Exclude from WhatsApp" on the user page. */
+export type WaUserOptOut = {
+  /** No phone = nothing to exclude. */
+  has_phone: boolean;
+  excluded: boolean;
+  excluded_at: string | null;
+  /** stop_reply = the user replied STOP · manual = an admin excluded them */
+  reason: "stop_reply" | "manual" | string | null;
+};
+
 export type WaMessagesQuery = {
   kind?: WaMessageKind;
   event?: string;
-  status?: WaMessageStatus;
+  /** One status or a comma list ("sent,delivered,read"). */
+  status?: string;
+  /** Oldest first; newest first when left out. */
+  order?: "oldest";
   /** Number contains. */
   q?: string;
   /** YYYY-MM-DD, IST. */

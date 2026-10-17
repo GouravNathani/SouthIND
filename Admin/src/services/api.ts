@@ -61,6 +61,7 @@ import type {
   WaEventUpdate,
   WaMessage,
   WaMessagesQuery,
+  WaUserOptOut,
   WaPage,
   WaPreview,
   WaTemplate,
@@ -1289,6 +1290,22 @@ export const api = createApi({
       transformResponse: (response: unknown) => toWaPage<WaMessage>(response),
       providesTags: ["WaMessages"],
     }),
+    getWaUserOptOut: builder.query<WaUserOptOut, number>({
+      query: (id) => `/wa/users/${id}/opt-out`,
+      transformResponse: (response: unknown) => unwrapObject<WaUserOptOut>(response, "excluded"),
+    }),
+    setWaUserOptOut: builder.mutation<WaUserOptOut, { id: number; excluded: boolean }>({
+      query: ({ id, excluded }) => ({ url: `/wa/users/${id}/opt-out`, method: "PUT", body: { excluded } }),
+      transformResponse: (response: unknown) => unwrapObject<WaUserOptOut>(response, "excluded"),
+      onQueryStarted: async ({ id }, { dispatch, queryFulfilled }) => {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(api.util.upsertQueryData("getWaUserOptOut", id, data));
+        } catch {
+          /* the caller shows the error */
+        }
+      },
+    }),
     getWaUsage: builder.query<WaUsage, void>({
       query: () => "/wa/usage",
       transformResponse: (response: unknown) => unwrapObject<WaUsage>(response, "today"),
@@ -1514,5 +1531,7 @@ export const {
   useGetWaCampaignsQuery,
   useCancelWaCampaignMutation,
   useGetWaMessagesQuery,
+  useGetWaUserOptOutQuery,
+  useSetWaUserOptOutMutation,
   useGetWaUsageQuery,
 } = api;

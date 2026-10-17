@@ -1,15 +1,23 @@
 import type { ReactNode } from "react";
-import type { WaMessageKind, WaMessageStatus, WaMessagesQuery } from "@/types/api";
+import type { WaMessageKind, WaMessagesQuery } from "@/types/api";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Segmented from "@/components/ui/Segmented";
 import { Input, Select } from "@/components/ui/Field";
-import { EVENT_LABELS, MESSAGE_STATUS_LABELS } from "@/components/wahub/waFormat";
+import { EVENT_LABELS } from "@/components/wahub/waFormat";
+
+/**
+ * "" = every message that went out or is still going (not-sent rows left out:
+ * "Already sent", STOP, no WhatsApp… would read as extra messages).
+ */
+export type HistoryShow = "" | "sent" | "pending" | "failed" | "skipped";
+export type HistoryOrder = "newest" | "oldest";
 
 export type HistoryFilterState = {
   kind: "" | WaMessageKind;
   event: string;
-  status: "" | WaMessageStatus;
+  show: HistoryShow;
+  order: HistoryOrder;
   from: string;
   to: string;
   /** Number contains. */
@@ -19,7 +27,8 @@ export type HistoryFilterState = {
 export const EMPTY_HISTORY_FILTERS: HistoryFilterState = {
   kind: "",
   event: "",
-  status: "",
+  show: "",
+  order: "newest",
   from: "",
   to: "",
   q: "",
@@ -32,30 +41,42 @@ const KIND_OPTIONS = [
   { value: "test", label: "Test" },
 ] as const satisfies readonly { value: HistoryFilterState["kind"]; label: string }[];
 
-const STATUS_ORDER: WaMessageStatus[] = [
-  "sent",
-  "delivered",
-  "read",
-  "failed",
-  "skipped",
-  "queued",
-  "sending",
-  "scheduled",
-  "cancelled",
-];
+const SHOW_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "sent", label: "Sent" },
+  { value: "pending", label: "Pending" },
+  { value: "failed", label: "Failed" },
+  { value: "skipped", label: "Not sent" },
+] as const satisfies readonly { value: HistoryShow; label: string }[];
+
+const ORDER_OPTIONS = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+] as const satisfies readonly { value: HistoryOrder; label: string }[];
+
+const SHOW_STATUSES: Record<HistoryShow, string> = {
+  "": "scheduled,queued,sending,sent,delivered,read,failed",
+  sent: "sent,delivered,read",
+  pending: "scheduled,queued,sending",
+  failed: "failed",
+  skipped: "skipped,cancelled",
+};
 
 /** Filter state → the hub's query (event only applies to event messages). */
 export const historyQuery = (filters: HistoryFilterState, q: string): WaMessagesQuery => ({
   kind: filters.kind || undefined,
   event: filters.kind === "" || filters.kind === "event" ? filters.event || undefined : undefined,
-  status: filters.status || undefined,
+  status: SHOW_STATUSES[filters.show],
+  order: filters.order === "oldest" ? "oldest" : undefined,
   from: filters.from || undefined,
   to: filters.to || undefined,
   q: q.replace(/\D/g, "") || undefined,
 });
 
 export const isFiltered = (filters: HistoryFilterState) =>
-  Object.values(filters).some((value) => value !== "");
+  (Object.keys(EMPTY_HISTORY_FILTERS) as (keyof HistoryFilterState)[]).some(
+    (key) => key !== "order" && filters[key] !== EMPTY_HISTORY_FILTERS[key]
+  );
 
 export default function HistoryFilters({
   value,
@@ -69,6 +90,7 @@ export default function HistoryFilters({
 }) {
   const patch = (partial: Partial<HistoryFilterState>) => onChange({ ...value, ...partial });
   const eventApplies = value.kind === "" || value.kind === "event";
+  const changed = isFiltered(value) || value.order !== EMPTY_HISTORY_FILTERS.order;
 
   return (
     <Card>
@@ -82,30 +104,38 @@ export default function HistoryFilters({
           options={KIND_OPTIONS}
           className="col-span-2"
         />
+        <Segmented
+          label="Show"
+          value={value.show}
+          onChange={(show) => patch({ show })}
+          options={SHOW_OPTIONS}
+          breakAfter={3}
+          className="col-span-2"
+          hint={
+            value.show === ""
+              ? "Messages skipped before sending (already sent today, STOP, no WhatsApp) are under Not sent."
+              : undefined
+          }
+        />
+        <Segmented
+          label="Sort"
+          value={value.order}
+          onChange={(order) => patch({ order })}
+          options={ORDER_OPTIONS}
+          className="col-span-2 lg:col-span-1"
+        />
         {eventApplies ? (
-          <Select label="Event" value={value.event} onChange={(event) => patch({ event: event.target.value })}>
-            <option value="">All events</option>
-            {Object.entries(EVENT_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </Select>
+          <div className="col-span-2 min-w-0 lg:col-span-1">
+            <Select label="Event" value={value.event} onChange={(event) => patch({ event: event.target.value })}>
+              <option value="">All events</option>
+              {Object.entries(EVENT_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </div>
         ) : null}
-        <div className={eventApplies ? "min-w-0" : "col-span-2 min-w-0 lg:col-span-1"}>
-          <Select
-            label="Status"
-            value={value.status}
-            onChange={(event) => patch({ status: event.target.value as HistoryFilterState["status"] })}
-          >
-            <option value="">All statuses</option>
-            {STATUS_ORDER.map((status) => (
-              <option key={status} value={status}>
-                {MESSAGE_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </Select>
-        </div>
         <Input
           label="From"
           type="date"
@@ -129,7 +159,7 @@ export default function HistoryFilters({
             onChange={(event) => patch({ q: event.target.value.replace(/[^\d+\s]/g, "") })}
           />
         </div>
-        {isFiltered(value) ? (
+        {changed ? (
           <div className="col-span-2 flex items-end lg:col-span-1">
             <Button variant="ghost" onClick={() => onChange(EMPTY_HISTORY_FILTERS)}>
               Clear filters

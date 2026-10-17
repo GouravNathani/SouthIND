@@ -70,6 +70,7 @@ import type {
   WaPage,
   WaSuperCampaignsQuery,
   WaSuperMessagesQuery,
+  WaUserOptOut,
   WaUsage,
 } from "../types/api";
 
@@ -1592,6 +1593,22 @@ export const api = createApi({
       query: (body) => ({ url: "/tickers", method: "PUT", body }),
       invalidatesTags: ["Tickers"],
     }),
+    getWaUserOptOut: builder.query<WaUserOptOut, number>({
+      query: (id) => `/wa/users/${id}/opt-out`,
+      transformResponse: (response: unknown) => unwrapWaObject<WaUserOptOut>(response, "excluded"),
+    }),
+    setWaUserOptOut: builder.mutation<WaUserOptOut, { id: number; excluded: boolean }>({
+      query: ({ id, excluded }) => ({ url: `/wa/users/${id}/opt-out`, method: "PUT", body: { excluded } }),
+      transformResponse: (response: unknown) => unwrapWaObject<WaUserOptOut>(response, "excluded"),
+      onQueryStarted: async ({ id }, { dispatch, queryFulfilled }) => {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(api.util.upsertQueryData("getWaUserOptOut", id, data));
+        } catch {
+          /* the caller shows the error */
+        }
+      },
+    }),
     getWaUsage: builder.query<WaUsage, void>({
       query: () => "/wa/usage",
       transformResponse: (response: unknown): WaUsage => {
@@ -1788,6 +1805,8 @@ export const {
   useGetWaConnectionsQuery,
   useSetWaConnectionEnabledMutation,
   useGetWaMessagesQuery,
+  useGetWaUserOptOutQuery,
+  useSetWaUserOptOutMutation,
   useGetWaCampaignsQuery,
   useGetWaUsageQuery,
   useGetBranchClubsQuery,
