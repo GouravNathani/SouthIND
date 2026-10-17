@@ -34,8 +34,9 @@ const SEARCH_DEBOUNCE_MS = 350;
 
 export default function UsersPage() {
   const { branches, branchId, branch } = useBranch();
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  // "Players to call" on the dashboard opens this list with ?search=<play id>.
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get("search") ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(search.trim());
   const [status, setStatus] = useState("");
   const waHubOn = useWaHubEnabled();
   const [waUser, setWaUser] = useState<UserRecord | null>(null);

@@ -18,6 +18,7 @@ import type { DepositRecord, SummaryTotals, WithdrawRecord } from "@/types/api";
 import { resolveErrorMessage } from "@/utils/errors";
 import { formatDateTime, formatDuration } from "@/utils/dateTime";
 import { compactInr, money } from "@/utils/format";
+import BusinessDashboard from "@/components/business/BusinessDashboard";
 import { TIMEFRAMES, rangeParams, type TimeframeId } from "@/utils/timeframe";
 
 const TIMEFRAME_KEY = "sind_super_dashboard_timeframe";
@@ -181,6 +182,8 @@ export default function DashboardPage() {
             onOpenAll={() => navigate("/withdraw")}
           />
         </div>
+
+        <BusinessDashboard branchId={branchId} />
       </div>
     </SuperShell>
   );
