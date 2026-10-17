@@ -46,6 +46,11 @@ Route::prefix('admin/wa')
 
         Route::get('messages', [AdminWaHubController::class, 'messages']);
         Route::get('usage', [AdminWaHubController::class, 'usage']);
+
+        // Exclude from WhatsApp (user page).
+        Route::get('users/{user}/opt-out', [AdminWaHubController::class, 'userOptOut'])->whereNumber('user');
+        Route::put('users/{user}/opt-out', [AdminWaHubController::class, 'updateUserOptOut'])
+            ->whereNumber('user')->middleware('throttle:30,1');
     });
 
 // Super admin: every branch.
@@ -59,4 +64,8 @@ Route::prefix('super/wa')
         Route::get('messages', [SuperWaHubController::class, 'messages']);
         Route::get('campaigns', [SuperWaHubController::class, 'campaigns']);
         Route::get('usage', [SuperWaHubController::class, 'usage']);
+
+        Route::get('users/{user}/opt-out', [SuperWaHubController::class, 'userOptOut'])->whereNumber('user');
+        Route::put('users/{user}/opt-out', [SuperWaHubController::class, 'updateUserOptOut'])
+            ->whereNumber('user')->middleware('throttle:30,1');
     });

@@ -98,6 +98,18 @@ class WaHubClient
         return $this->request('GET', $this->connectionPath($key, '/opt-outs'));
     }
 
+    /** One number: `{ number, opted_out, opted_out_at, reason }`. */
+    public function contact(string $key, string $number): WaHubResponse
+    {
+        return $this->request('GET', $this->connectionPath($key, '/contacts/' . rawurlencode($number)));
+    }
+
+    /** @param  array<string, mixed>  $data  opted_out (bool), actor */
+    public function setContact(string $key, string $number, array $data): WaHubResponse
+    {
+        return $this->request('PUT', $this->connectionPath($key, '/contacts/' . rawurlencode($number)), $data);
+    }
+
     // ---- Events -----------------------------------------------------------
 
     public function events(string $key): WaHubResponse

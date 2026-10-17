@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesWaOptOut;
 use App\Http\Controllers\Concerns\ProxiesWaHub;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\WaHub\WaAudienceRequest;
@@ -11,6 +12,7 @@ use App\Http\Requests\Admin\WaHub\WaEventRequest;
 use App\Http\Requests\Admin\WaHub\WaTemplateRequest;
 use App\Http\Requests\Admin\WaHub\WaTestRequest;
 use App\Models\Branch;
+use App\Models\User;
 use App\Support\PhoneMask;
 use App\Support\ResolvesBranch;
 use App\Support\WaHub\CampaignAudience;
@@ -33,11 +35,12 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class WaHubController extends Controller
 {
+    use HandlesWaOptOut;
     use ProxiesWaHub;
     use ResolvesBranch;
 
     /** Message list filters passed through to the hub (connection is forced). */
-    private const MESSAGE_FILTERS = ['kind', 'event', 'status', 'campaign_id', 'ref_user_id', 'q', 'from', 'to', 'page', 'per_page'];
+    private const MESSAGE_FILTERS = ['kind', 'event', 'status', 'campaign_id', 'ref_user_id', 'q', 'from', 'to', 'order', 'page', 'per_page'];
 
     public function __construct(private readonly WaHubClient $hub)
     {
@@ -282,7 +285,26 @@ class WaHubController extends Controller
         );
     }
 
+    // ---- Exclude from WhatsApp (user page) --------------------------------
+
+    public function userOptOut(Request $request, int $user): JsonResponse
+    {
+        return $this->optOutStatus($this->branchUser($request, $user));
+    }
+
+    public function updateUserOptOut(Request $request, int $user): JsonResponse
+    {
+        return $this->updateOptOut($request, $this->branchUser($request, $user));
+    }
+
     // ---- Helpers ----------------------------------------------------------
+
+    /** Another branch's user is answered exactly like a missing one. */
+    private function branchUser(Request $request, int $id): User
+    {
+        return User::query()->where('branch_id', $this->resolveBranchId($request->user()))->findOrFail($id);
+    }
+
 
     private function branch(Request $request): Branch
     {

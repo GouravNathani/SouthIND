@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Super;
 
+use App\Http\Controllers\Concerns\HandlesWaOptOut;
 use App\Http\Controllers\Concerns\ProxiesWaHub;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\User;
 use App\Support\WaHub\WaHubClient;
 use App\Support\WaHub\WaHubRate;
 use Illuminate\Http\JsonResponse;
@@ -18,10 +20,11 @@ use Illuminate\Support\Collection;
  */
 class WaHubController extends Controller
 {
+    use HandlesWaOptOut;
     use ProxiesWaHub;
 
     /** Message list filters passed through to the hub. */
-    private const MESSAGE_FILTERS = ['kind', 'event', 'status', 'campaign_id', 'ref_user_id', 'q', 'from', 'to', 'page', 'per_page'];
+    private const MESSAGE_FILTERS = ['kind', 'event', 'status', 'campaign_id', 'ref_user_id', 'q', 'from', 'to', 'order', 'page', 'per_page'];
 
     public function __construct(private readonly WaHubClient $hub)
     {
@@ -98,6 +101,17 @@ class WaHubController extends Controller
     }
 
     // ---- Helpers ----------------------------------------------------------
+
+    /** Exclude from WhatsApp, for a user of any branch (their branch's number). */
+    public function userOptOut(int $user): JsonResponse
+    {
+        return $this->optOutStatus(User::query()->findOrFail($user));
+    }
+
+    public function updateUserOptOut(Request $request, int $user): JsonResponse
+    {
+        return $this->updateOptOut($request, User::query()->findOrFail($user));
+    }
 
     private function setEnabled(int $branchId, bool $enabled): JsonResponse
     {
