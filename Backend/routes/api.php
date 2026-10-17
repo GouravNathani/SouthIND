@@ -31,6 +31,7 @@ use App\Http\Controllers\User\SupportChatController as UserSupportChatController
 use App\Http\Controllers\Super\SuperAuthController;
 use App\Http\Controllers\Super\BonusCodeController as SuperBonusCodeController;
 use App\Http\Controllers\Super\BranchController as SuperBranchController;
+use App\Http\Controllers\Super\BusinessDashboardController;
 use App\Http\Controllers\Super\DashboardMetricsController;
 use App\Http\Controllers\Super\DepositController as SuperDepositController;
 use App\Http\Controllers\Super\GlobalSettingController as SuperGlobalSettingController;
@@ -322,6 +323,7 @@ Route::prefix('super')->group(function () {
         Route::patch('withdrawals/{withdrawal}/status', [SuperWithdrawalController::class, 'updateStatus']);
         Route::get('dashboard/user-activity', [DashboardMetricsController::class, 'userActivity']);
         Route::get('dashboard/user-averages', [DashboardMetricsController::class, 'userAverages']);
+        Route::get('dashboard/business', BusinessDashboardController::class);
         Route::post('maintenance/clear-cache', MaintenanceController::class);
     });
 });
