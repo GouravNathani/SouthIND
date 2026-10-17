@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import AdminShell from "@/components/AdminShell";
+import TickerCard from "@/components/TickerCard";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
@@ -88,6 +89,9 @@ export default function SettingPage() {
 
   return (
     <AdminShell title="Settings" subtitle="What the user app shows for this branch">
+      <div className="mb-4">
+        <TickerCard />
+      </div>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <Card>
           <CardTitle>Offer text</CardTitle>

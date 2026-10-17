@@ -28,6 +28,7 @@ import {
   IconTrophy,
   IconUser,
   IconUsers,
+  IconClub,
   IconWhatsApp,
   IconWithdraw,
 } from "@/components/icons";
@@ -61,6 +62,7 @@ export const NAV: NavEntry[] = [
   { to: "/deposit", label: "Deposit", Icon: IconDeposit, queue: "deposit", tab: true },
   { to: "/withdraw", label: "Withdraw", Icon: IconWithdraw, queue: "withdraw", tab: true },
   { to: "/users", label: "Users", Icon: IconUsers, tab: true },
+  { to: "/clubs", label: "Clubs", Icon: IconClub },
   { to: "/referral", label: "Agents", Icon: IconUser },
   { to: "/accounts", label: "Accounts", Icon: IconAccounts },
   { to: "/banner", label: "Banner", Icon: IconBanner },

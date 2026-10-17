@@ -69,6 +69,8 @@ Route::middleware('wallet-hmac')->group(function () {
 Route::middleware('user-panel-open')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('mpin-login', [UserAuthController::class, 'loginWithMpin'])->middleware('throttle:login');
+        // Adda → SouthIND hand-off (signed one-time ticket from a logged-in Adda user).
+        Route::post('sso/adda', [UserAuthController::class, 'loginWithAddaTicket'])->middleware('throttle:login');
         Route::post('check-branch', [UserAuthController::class, 'checkBranch']);
 
         Route::middleware('auth:sanctum')->group(function () {

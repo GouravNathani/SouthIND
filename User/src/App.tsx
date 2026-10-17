@@ -1,6 +1,7 @@
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import AuthStatusGate from "@/components/AuthStatusGate";
 import LoginPage from "@/pages/login/LoginPage";
+import SsoPage from "@/pages/login/SsoPage";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
 import SelectDepositAccountPage from "@/pages/deposit/SelectDepositAccountPage";
 import DepositDetailsPage from "@/pages/deposit/DepositDetailsPage";
@@ -18,6 +19,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
+          {/* Arrival from Adda with a one-time login ticket. */}
+          <Route path="/sso" element={<SsoPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
 
           {/* The tab lands straight on the picker; BC's redirect-only screens are

@@ -9,7 +9,7 @@ import HistoryFilters, {
 } from "@/components/wahub/HistoryFilters";
 import MessageList from "@/components/wahub/MessageList";
 import WaErrorState from "@/components/wahub/WaErrorState";
-import { count, toPaginationMeta } from "@/components/wahub/waFormat";
+import { coinsLabel, count, toPaginationMeta } from "@/components/wahub/waFormat";
 import { usePageVisible } from "@/hooks/usePageVisible";
 import { useGetWaMessagesQuery } from "@/services/api";
 
@@ -68,7 +68,7 @@ export default function HistoryTab({ branchId }: { branchId: number | null }) {
             <p className="tabular text-xs text-muted">
               {count(meta.total)} message{meta.total === 1 ? "" : "s"}
               {rows.length
-                ? ` · ${count(rows.reduce((sum, row) => sum + (row.coins ?? 0), 0))} coins on this page`
+                ? ` · ${coinsLabel(rows.reduce((sum, row) => sum + (Number(row.coins) || 0), 0))} on this page`
                 : ""}
             </p>
           ) : null}

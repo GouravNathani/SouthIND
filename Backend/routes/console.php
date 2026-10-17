@@ -410,3 +410,23 @@ Schedule::command('tokens:purge-all')
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
     ->everyMinute()
     ->withoutOverlapping(5);
+
+Artisan::command('clubs:refresh {--branch= : Only this branch id}', function (): int {
+    // Puts every user in the club their active days reach (approved deposits /
+    // withdrawals in the club window), or in none below the lowest club.
+    $assigner = app(\App\Support\Club\ClubAssigner::class);
+    $branch = $this->option('branch');
+
+    $result = $branch ? $assigner->refreshBranch((int) $branch) : $assigner->refreshAll();
+
+    $this->info('Clubs refreshed: '.json_encode($result));
+    Log::info('Clubs refreshed.', $result);
+
+    return \Illuminate\Console\Command::SUCCESS;
+})->purpose('Put every user in the club their active days reach');
+
+// 00:20 — a new day moves the club window, so day counts change overnight.
+// A decision on a deposit/withdrawal also refreshes that one user at once.
+Schedule::command('clubs:refresh')
+    ->dailyAt('00:20')
+    ->withoutOverlapping();

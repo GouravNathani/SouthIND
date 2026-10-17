@@ -146,3 +146,27 @@ input[type="number"] {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Home page strip: text runs right to left, forever; still for reduced motion. */
+@keyframes ticker-run {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.ticker-run {
+  display: inline-block;
+  min-width: 100%;
+  padding-left: 0.75rem;
+  animation: ticker-run 14s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-run {
+    animation: none;
+    transform: none;
+  }
+}

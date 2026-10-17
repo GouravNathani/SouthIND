@@ -90,6 +90,9 @@ return [
             'support_out_cost' => (float) env('WALLET_SELF_SUPPORT_OUT_COST', 0.3),
             'media_in_cost' => (float) env('WALLET_SELF_MEDIA_IN_COST', 0.1),
             'media_out_cost' => (float) env('WALLET_SELF_MEDIA_OUT_COST', 0.5),
+            // WA Hub: coins per outgoing message. The hub bills Control itself;
+            // the panel only reads this rate to price campaign previews and usage.
+            'wahub_out_cost' => (float) env('WALLET_SELF_WAHUB_OUT_COST', 0.25),
         ],
     ],
 ];

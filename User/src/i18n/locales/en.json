@@ -262,5 +262,13 @@
     "body": "Get told the moment a deposit or withdrawal is decided.",
     "enable": "Enable",
     "dismiss": "Not now"
+  },
+  "sso": {
+    "title": "Signing you in…",
+    "body": "Moving you over from Adda. One moment.",
+    "failedTitle": "Could not sign you in automatically",
+    "failed": "This link did not work.",
+    "missing": "This link is incomplete.",
+    "loginInstead": "Log in with phone and PIN"
   }
 }

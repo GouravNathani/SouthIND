@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\AddaSsoRequest;
 use App\Http\Requests\Auth\UserBranchCheckRequest;
 use App\Http\Requests\Auth\UserChangeMpinRequest;
 use App\Http\Requests\Auth\UserMpinLoginRequest;
@@ -10,7 +11,11 @@ use App\Http\Requests\Auth\UserVerifyMpinRequest;
 use App\Http\Resources\User\UserResource;
 use App\Models\Branch;
 use App\Models\User;
+use App\Support\Sso\AddaTicket;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class UserAuthController extends Controller
@@ -63,6 +68,57 @@ class UserAuthController extends Controller
         }
 
         $user->clearMpinLock();
+
+        return response()->json([
+            'token' => $user->createToken('user')->plainTextToken,
+            'user' => new UserResource($user),
+        ]);
+    }
+
+    /**
+     * Adda → SouthIND hand-off: a user already logged in to Adda arrives with a
+     * signed one-time ticket instead of their MPIN. Same response as mpin-login.
+     */
+    public function loginWithAddaTicket(AddaSsoRequest $request)
+    {
+        $reason = null;
+        $claims = AddaTicket::verify(
+            (string) $request->validated()['ticket'],
+            (string) config('adda.sso_secret'),
+            (int) config('adda.sso_max_age', 120),
+            $reason,
+        );
+
+        if ($claims === null) {
+            Log::warning('Adda hand-off rejected.', ['reason' => $reason]);
+
+            return $reason === 'disabled'
+                ? response()->json(['message' => 'Not available.'], Response::HTTP_NOT_FOUND)
+                : response()->json(['message' => 'This link has expired. Please log in with your phone and PIN.'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $user = User::query()->whereKey($claims['sub'])->where('phone', $claims['ph'])->first();
+        if (!$user) {
+            return response()->json(['message' => 'Account not found. Please log in with your phone and PIN.'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        if ($user->isMpinLocked()) {
+            return response()->json(['message' => self::MPIN_LOCKED_MESSAGE], Response::HTTP_LOCKED);
+        }
+
+        // Burn the ticket. The unique jti makes a replay fail even when two
+        // requests race.
+        try {
+            DB::table('sso_tickets')->insert([
+                'jti' => $claims['jti'],
+                'user_id' => $user->id,
+                'expires_at' => date('Y-m-d H:i:s', $claims['exp']),
+                'created_at' => now(),
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            return response()->json(['message' => 'This link was already used. Please log in with your phone and PIN.'], Response::HTTP_UNAUTHORIZED);
+        }
+        DB::table('sso_tickets')->where('expires_at', '<', now()->subDay())->delete();
 
         return response()->json([
             'token' => $user->createToken('user')->plainTextToken,

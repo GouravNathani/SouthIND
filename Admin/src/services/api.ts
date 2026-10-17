@@ -10,6 +10,9 @@ import { withInFlightDedup } from "./dedupeBaseQuery";
 
 import type {
   AccountRecord,
+  BranchTicker,
+  ClubInput,
+  ClubsResponse,
   AppSettings,
   BannerRecord,
   Credentials,
@@ -170,6 +173,8 @@ export const api = createApi({
   reducerPath: "api",
   baseQuery: withInFlightDedup(baseQueryWithCsrfRetry),
   tagTypes: [
+    "Clubs",
+    "Ticker",
     "BonusCodes",
     "BonusRedemptions",
     "Me",
@@ -531,6 +536,7 @@ export const api = createApi({
         if (params?.status) queryParams.status = params.status;
         if (params?.sort_by) queryParams.sort_by = params.sort_by;
         if (params?.reverse) queryParams.reverse = 1;
+        if (params?.club_id !== undefined) queryParams.club_id = params.club_id;
         return {
           url: "/users",
           params: queryParams,
@@ -657,6 +663,44 @@ export const api = createApi({
         { type: "SupportConversations", id: "LIST" },
         "SupportThread",
       ],
+    }),
+    // ── Clubs (the system puts users in them) and the home-page strip ──────
+    getClubs: builder.query<ClubsResponse, void>({
+      query: () => "/clubs",
+      providesTags: ["Clubs"],
+    }),
+    createClub: builder.mutation<unknown, ClubInput>({
+      query: (body) => ({ url: "/clubs", method: "POST", body }),
+      // Members move between clubs at once, so user lists refresh too.
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    updateClub: builder.mutation<unknown, ClubInput & { id: number }>({
+      query: ({ id, ...body }) => ({ url: `/clubs/${id}`, method: "PUT", body }),
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    deleteClub: builder.mutation<unknown, number>({
+      query: (id) => ({ url: `/clubs/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    addDefaultClubs: builder.mutation<ClubsResponse, void>({
+      query: () => ({ url: "/clubs/defaults", method: "POST", body: {} }),
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    refreshClubs: builder.mutation<ClubsResponse, void>({
+      query: () => ({ url: "/clubs/refresh", method: "POST", body: {} }),
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    getTicker: builder.query<BranchTicker, void>({
+      query: () => "/ticker",
+      transformResponse: (response: { data?: BranchTicker } | BranchTicker) =>
+        unwrapData<BranchTicker>(response),
+      providesTags: ["Ticker"],
+    }),
+    updateTicker: builder.mutation<BranchTicker, { enabled: boolean; text: string }>({
+      query: (body) => ({ url: "/ticker", method: "PUT", body }),
+      transformResponse: (response: { data?: BranchTicker } | BranchTicker) =>
+        unwrapData<BranchTicker>(response),
+      invalidatesTags: ["Ticker"],
     }),
     getWinnerStreak: builder.query<WinnerStreakOverview, void>({
       query: () => "/winner-streak",
@@ -1368,6 +1412,14 @@ function markWaHubOffOnRefusal(
 }
 
 export const {
+  useGetClubsQuery,
+  useCreateClubMutation,
+  useUpdateClubMutation,
+  useDeleteClubMutation,
+  useAddDefaultClubsMutation,
+  useRefreshClubsMutation,
+  useGetTickerQuery,
+  useUpdateTickerMutation,
   useLoginMutation,
   useLogoutMutation,
   useGetCurrentUserQuery,

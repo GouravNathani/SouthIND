@@ -17,6 +17,7 @@ use App\Support\WaHub\CampaignAudience;
 use App\Support\WaHub\WaHubClient;
 use App\Support\WaHub\WaHubNotifier;
 use App\Support\WaHub\WaHubPhone;
+use App\Support\WaHub\WaHubRate;
 use App\Support\WaHub\WaHubResponse;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -272,9 +273,13 @@ class WaHubController extends Controller
         });
     }
 
+    /** The hub's usage for this branch, plus the wallet's current rate per message. */
     public function usage(Request $request): JsonResponse
     {
-        return $this->proxy(fn () => $this->hub->usage(['connection' => $this->connectionKey($request)]));
+        return $this->proxy(
+            fn () => $this->hub->usage(['connection' => $this->connectionKey($request)]),
+            fn (array $data): array => [...$data, 'coins_per_message' => WaHubRate::coinsPerMessage()],
+        );
     }
 
     // ---- Helpers ----------------------------------------------------------

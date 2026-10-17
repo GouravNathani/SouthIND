@@ -33,6 +33,7 @@ import {
   IconTrophy,
   IconUser,
   IconUsers,
+  IconClub,
   IconWallet,
   IconWhatsApp,
   IconWithdraw,
@@ -73,6 +74,7 @@ export const NAV: NavEntry[] = [
   { to: "/branches", label: "Branches", Icon: IconBranch, tab: true, group: "Network" },
   { to: "/admins", label: "Admins", Icon: IconShield, group: "Network" },
   { to: "/users", label: "Users", Icon: IconUsers, group: "Network" },
+  { to: "/clubs", label: "Clubs", Icon: IconClub, group: "Network" },
   { to: "/agents", label: "Agents", Icon: IconUser, group: "Network" },
 
   { to: "/wallet", label: "Wallet", Icon: IconWallet, group: "Money" },

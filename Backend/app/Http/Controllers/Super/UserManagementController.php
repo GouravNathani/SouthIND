@@ -11,6 +11,7 @@ use App\Http\Resources\Super\UserResource;
 use App\Models\Deposit;
 use App\Models\User;
 use App\Models\Withdrawal;
+use App\Support\Club\ClubFilter;
 use App\Support\Query\UserListOrder;
 use App\Support\WaHub\WaHubNotifier;
 use Illuminate\Http\Request;
@@ -24,7 +25,8 @@ class UserManagementController extends Controller
 
     public function index(Request $request)
     {
-        $query = User::query()->with('branch');
+        $query = User::query()->with(['branch', 'clubMembership.club']);
+        ClubFilter::apply($query, $request);
         $query->select('users.*')
             ->selectSub(
                 Deposit::query()
@@ -200,7 +202,7 @@ class UserManagementController extends Controller
             ->whereKey($user->id)
             ->firstOrFail();
 
-        return new UserResource($userWithTotals->load(['branch', 'tags']));
+        return new UserResource($userWithTotals->load(['branch', 'tags', 'clubMembership.club']));
     }
 
     public function update(User $user, UserUpdateRequest $request)
@@ -211,7 +213,7 @@ class UserManagementController extends Controller
 
         $payload = [
             'message' => 'User updated successfully.',
-            'user' => new UserResource($user->refresh()->load(['branch', 'tags'])),
+            'user' => new UserResource($user->refresh()->load(['branch', 'tags', 'clubMembership.club'])),
         ];
         if ($warning) {
             $payload['warning'] = $warning;
@@ -226,7 +228,7 @@ class UserManagementController extends Controller
 
         return response()->json([
             'message' => 'User status updated successfully.',
-            'user' => new UserResource($user->refresh()->load(['branch', 'tags'])),
+            'user' => new UserResource($user->refresh()->load(['branch', 'tags', 'clubMembership.club'])),
         ], Response::HTTP_OK);
     }
 
@@ -255,7 +257,7 @@ class UserManagementController extends Controller
 
         return response()->json([
             'message' => 'User branch updated successfully.',
-            'user' => new UserResource($user->refresh()->load(['branch', 'tags'])),
+            'user' => new UserResource($user->refresh()->load(['branch', 'tags', 'clubMembership.club'])),
         ], Response::HTTP_OK);
     }
 

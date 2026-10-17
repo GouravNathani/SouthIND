@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Support\Facades\Route::middleware('api')
                 ->prefix('api')
                 ->group(__DIR__.'/../routes/wa_hub.php');
+            // Clubs and the user home-page strip.
+            \Illuminate\Support\Facades\Route::middleware('api')
+                ->prefix('api')
+                ->group(__DIR__.'/../routes/clubs.php');
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

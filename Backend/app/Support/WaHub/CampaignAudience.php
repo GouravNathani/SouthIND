@@ -2,14 +2,16 @@
 
 namespace App\Support\WaHub;
 
+use App\Models\Club;
 use App\Models\Tag;
 use App\Models\User;
 
 /**
  * Who a campaign goes to, resolved inside one branch.
  *
- * Audience = users carrying ANY of the given tags, or an explicit list of
- * user ids. Tags and users of another branch are ignored. Only active users
+ * Audience = users carrying ANY of the given tags, users in ANY of the given
+ * clubs, or an explicit list of user ids. Tags, clubs and users of another
+ * branch are ignored. Only active users
  * with a phone are sent to, and a number shared by two accounts gets one
  * message (numbers are compared normalised, the way the hub sees them).
  */
@@ -21,7 +23,7 @@ class CampaignAudience
     private const SAMPLE_SIZE = 5;
 
     /**
-     * @param  array{type: string, tag_ids?: list<int|string>, user_ids?: list<int|string>}  $audience
+     * @param  array{type: string, tag_ids?: list<int|string>, club_ids?: list<int|string>, user_ids?: list<int|string>}  $audience
      * @return array{
      *     total: int,
      *     skipped: array{no_phone: int, duplicate: int, inactive: int},
@@ -58,6 +60,20 @@ class CampaignAudience
             }
 
             $query->whereHas('tags', fn ($tagQuery) => $tagQuery->whereIn('tags.id', $tags->pluck('id')->all()));
+        } elseif (($audience['type'] ?? null) === 'clubs') {
+            $clubs = Club::query()
+                ->where('branch_id', $branchId)
+                ->whereIn('id', self::ids($audience['club_ids'] ?? []))
+                ->orderByDesc('min_active_days')
+                ->get(['id', 'name']);
+
+            $result['label'] = 'Clubs: ' . $clubs->pluck('name')->implode(', ');
+
+            if ($clubs->isEmpty()) {
+                return $result;
+            }
+
+            $query->whereHas('clubMembership', fn ($member) => $member->whereIn('club_id', $clubs->pluck('id')->all()));
         } else {
             $userIds = self::ids($audience['user_ids'] ?? []);
 
@@ -118,7 +134,7 @@ class CampaignAudience
             }
         }
 
-        if (($audience['type'] ?? null) !== 'tags') {
+        if (! in_array($audience['type'] ?? null, ['tags', 'clubs'], true)) {
             $result['label'] = $matched === 1 ? '1 user' : "{$matched} users";
         }
 
@@ -126,7 +142,9 @@ class CampaignAudience
     }
 
     /**
-     * The preview the panel shows before sending: 1 coin per message sent.
+     * The preview the panel shows before sending. `coins` is the most it can
+     * cost: every recipient × the wallet's WA Hub rate (`coins_per_message`,
+     * see WaHubRate). Messages the hub skips or fails cost nothing.
      *
      * @param  array{type: string, tag_ids?: list<int|string>, user_ids?: list<int|string>}  $audience
      * @return array<string, mixed>
@@ -134,11 +152,13 @@ class CampaignAudience
     public static function preview(int $branchId, array $audience): array
     {
         $resolved = self::resolve($branchId, $audience);
+        $rate = WaHubRate::coinsPerMessage();
 
         return [
             'total' => $resolved['total'],
             'skipped' => $resolved['skipped'],
-            'coins' => $resolved['total'],
+            'coins' => round($resolved['total'] * $rate, 2),
+            'coins_per_message' => $rate,
             'sample' => $resolved['sample'],
             'max_recipients' => self::MAX_RECIPIENTS,
         ];

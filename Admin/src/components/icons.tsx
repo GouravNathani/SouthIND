@@ -36,6 +36,13 @@ export const IconTrophy = ({ size = 20 }: P) => (
   </svg>
 );
 
+/** Club: an award ribbon (activity tier). */
+export const IconClub = ({ size = 20 }: P) => (
+  <svg {...base(size)}>
+    <circle cx="12" cy="8.5" r="5.5" /><path d="M8.6 13 7 21l5-2.8 5 2.8-1.6-8" />
+  </svg>
+);
+
 export const IconChat = ({ size = 20 }: P) => (
   <svg {...base(size)}><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5" /></svg>
 );

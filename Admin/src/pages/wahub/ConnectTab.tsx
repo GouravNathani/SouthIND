@@ -9,6 +9,7 @@ import { IconAlert, IconLink, IconRefresh, IconSend } from "@/components/icons";
 import WaPill, { WaNotice } from "@/components/wahub/WaPill";
 import {
   connectionStatus,
+  coinsLabel,
   count,
   isLinking,
   isReconnecting,
@@ -17,6 +18,7 @@ import {
   skipReasonLabel,
   waErrorMessage,
 } from "@/components/wahub/waFormat";
+import { useWaCoinRate } from "@/components/wahub/useWaCoinRate";
 import {
   useGetWaUsageQuery,
   useLinkWaConnectionMutation,
@@ -238,7 +240,7 @@ function ConnectedDetails({ connection, onDisconnect }: { connection: WaConnecti
         <p className="min-w-0 text-xs text-faint">
           {[
             connection.linked_at ? `Linked ${formatDateTime(connection.linked_at)}` : null,
-            usage.data ? `This month ${count(usage.data.month?.sent)} sent · ${count(usage.data.month?.coins)} coins` : null,
+            usage.data ? `This month ${count(usage.data.month?.sent)} sent · ${coinsLabel(usage.data.month?.coins)}` : null,
           ]
             .filter(Boolean)
             .join(" · ") || "Daily limit protects the number from being flagged."}
@@ -405,6 +407,7 @@ function HeaderFooterCard({ connection }: { connection: WaConnection }) {
 // ── Test message ────────────────────────────────────────────────────────────
 
 function TestMessageCard({ connected }: { connected: boolean }) {
+  const rate = useWaCoinRate();
   const [text, setText] = useState("");
   const [to, setTo] = useState("");
   const [sendTest, { isLoading }] = useSendWaTestMutation();
@@ -431,7 +434,7 @@ function TestMessageCard({ connected }: { connected: boolean }) {
 
   return (
     <Card>
-      <CardTitle hint="1 coin">Send test message</CardTitle>
+      <CardTitle hint={coinsLabel(rate)}>Send test message</CardTitle>
       <form className="space-y-3" onSubmit={handleSubmit}>
         <Textarea
           label="Message"

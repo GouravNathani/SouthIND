@@ -10,7 +10,8 @@ import { IconChevronDown } from "@/components/icons";
 import VariableChips from "@/components/wahub/VariableChips";
 import WaPill from "@/components/wahub/WaPill";
 import WaErrorState from "@/components/wahub/WaErrorState";
-import { waErrorCode, waErrorMessage } from "@/components/wahub/waFormat";
+import { coinsLabel, waErrorCode, waErrorMessage } from "@/components/wahub/waFormat";
+import { useWaCoinRate } from "@/components/wahub/useWaCoinRate";
 import { useGetWaEventsQuery, usePreviewWaEventMutation, useUpdateWaEventMutation } from "@/services/api";
 
 const PREVIEW_DEBOUNCE_MS = 450;
@@ -23,6 +24,7 @@ const PREVIEW_DEBOUNCE_MS = 450;
 export default function EventsTab() {
   const events = useGetWaEventsQuery(undefined, { refetchOnMountOrArgChange: true });
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const rate = useWaCoinRate();
 
   if (events.isLoading) {
     return (
@@ -51,7 +53,7 @@ export default function EventsTab() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted">
-        {onCount} of {rows.length} on. A message goes out automatically when the event happens — 1 coin each.
+        {onCount} of {rows.length} on. A message goes out automatically when the event happens — {coinsLabel(rate)} each.
       </p>
       <ul className="space-y-2">
         {rows.map((event) => (

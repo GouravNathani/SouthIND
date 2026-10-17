@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AdminShell from "@/components/AdminShell";
 import AgentSelect from "@/components/AgentSelect";
+import ClubBadge from "@/components/ClubBadge";
 import Pagination from "@/components/Pagination";
 import UserSortControl from "@/components/UserSortControl";
 import Card from "@/components/ui/Card";
@@ -13,7 +14,7 @@ import Segmented from "@/components/ui/Segmented";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { IconPlus } from "@/components/icons";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { useCreateUserMutation, useGetCurrentUserQuery, useGetUsersQuery } from "@/services/api";
+import { useCreateUserMutation, useGetClubsQuery, useGetCurrentUserQuery, useGetUsersQuery } from "@/services/api";
 import type { UserRecord } from "@/types/api";
 import { resolveErrorMessage } from "@/utils/errors";
 import { formatLastSeen, isActiveNow } from "@/utils/dateTime";
@@ -53,7 +54,14 @@ export default function UsersPage() {
     return () => window.clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => setPage(1), [debouncedSearch, status, sortBy, reverse]);
+  // "View users" on the Clubs page opens this list filtered by that club.
+  const [searchParams] = useSearchParams();
+  const clubParam = searchParams.get("club") ?? "";
+  const [club, setClub] = useState(clubParam === "none" || /^\d+$/.test(clubParam) ? clubParam : "");
+  const { data: clubsData } = useGetClubsQuery();
+  const clubs = clubsData?.data ?? [];
+
+  useEffect(() => setPage(1), [debouncedSearch, status, sortBy, reverse, club]);
 
   // Profit totals are only sent to admins cleared to see them; the API falls
   // back to newest otherwise, so the option is not offered either.
@@ -70,8 +78,9 @@ export default function UsersPage() {
       status: status || undefined,
       sort_by: sortBy === "newest" ? undefined : sortBy,
       reverse: reverse || undefined,
+      club_id: club === "" ? undefined : club === "none" ? ("none" as const) : Number(club),
     }),
-    [page, debouncedSearch, status, sortBy, reverse]
+    [page, debouncedSearch, status, sortBy, reverse, club]
   );
 
   const { data, isFetching, error } = useGetUsersQuery(params);
@@ -139,6 +148,7 @@ export default function UsersPage() {
               style={{ background: isActiveNow(row.last_seen_at) ? "var(--pos)" : "var(--text-faint)" }}
             />
             <span className="truncate font-medium text-text">{row.name || "Unnamed"}</span>
+            {row.club ? <ClubBadge club={row.club} /> : null}
           </span>
           <span className="block truncate text-xs text-faint">
             {row.play_id ?? row.unique_number ?? row.phone ?? ""}
@@ -272,6 +282,20 @@ export default function UsersPage() {
               withProfit={canSeeProfit}
               className="sm:col-span-2"
             />
+            {clubs.length ? (
+              <Segmented
+                label="Club"
+                value={club}
+                onChange={setClub}
+                breakAfter={3}
+                className="sm:col-span-2 lg:col-span-4"
+                options={[
+                  { value: "", label: "All" },
+                  ...clubs.map((entry) => ({ value: String(entry.id), label: entry.name })),
+                  { value: "none", label: "No club" },
+                ]}
+              />
+            ) : null}
           </div>
         </Card>
 

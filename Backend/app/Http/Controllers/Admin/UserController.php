@@ -11,6 +11,7 @@ use App\Http\Resources\Admin\UserResource;
 use App\Models\Deposit;
 use App\Models\User;
 use App\Models\Withdrawal;
+use App\Support\Club\ClubFilter;
 use App\Support\ResolvesBranch;
 use App\Support\Query\UserListOrder;
 use App\Support\WaHub\WaHubNotifier;
@@ -26,7 +27,8 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $branchId = $this->resolveBranchId($request->user());
-        $query = User::query()->where('branch_id', $branchId)->with('branch');
+        $query = User::query()->where('branch_id', $branchId)->with(['branch', 'clubMembership.club']);
+        ClubFilter::apply($query, $request);
         $canViewProfit = (bool) ($request->user()?->allow_profit_view ?? false);
         if ($canViewProfit) {
             $query->select('users.*')
@@ -128,7 +130,7 @@ class UserController extends Controller
                 ->firstOrFail();
         }
 
-        return new UserResource($user->load(['branch', 'tags']));
+        return new UserResource($user->load(['branch', 'tags', 'clubMembership.club']));
     }
 
     public function store(UserStoreRequest $request)

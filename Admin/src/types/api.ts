@@ -195,6 +195,7 @@ export type SupportThread = {
 
 export type UserRecord = {
   id: number;
+  club?: UserClub | null;
   name?: string | null;
   phone?: string | null;
   username?: string | null;
@@ -271,6 +272,8 @@ export type UsersQueryParams = {
   sort_by?: string;
   /** Flip the sort (oldest first, Z → A, …). */
   reverse?: boolean;
+  /** A club id, or "none" for users below every club. */
+  club_id?: number | "none";
 };
 
 export type WalletExpiryStatus = {
@@ -893,12 +896,15 @@ export type WaCampaign = {
 
 export type WaAudience =
   | { type: "tags"; tag_ids: number[] }
+  | { type: "clubs"; club_ids: number[] }
   | { type: "users"; user_ids: number[] };
 
 export type WaCampaignPreview = {
   total: number;
   skipped: { no_phone: number; duplicate: number; inactive: number };
   coins: number;
+  /** The rate `coins` was priced at. */
+  coins_per_message?: number;
   sample: { id: number; name: string | null; phone_masked: string }[];
 };
 
@@ -922,4 +928,44 @@ export type WaUsage = {
     month_sent: number;
     month_coins: number;
   }[];
+  /** Coins one sent message costs (the wallet's WA Hub Out rate). */
+  coins_per_message?: number;
+};
+
+// ── Clubs (the system sorts users into them) and the home-page strip ────────
+
+/** An activity tier of this branch; the system puts users in it. */
+export type Club = {
+  id: number;
+  branch_id: number;
+  name: string;
+  color: string;
+  /** Active days (approved deposit/withdrawal) needed in the club window. */
+  min_active_days: number;
+  members_count: number;
+};
+
+export type ClubsMeta = {
+  window_days: number;
+  users_total: number;
+  members_total: number;
+  without_club: number;
+  refreshed_at: string | null;
+};
+
+export type ClubsResponse = { data: Club[]; meta: ClubsMeta };
+
+export type ClubInput = { name: string; color: string; min_active_days: number };
+
+/** The user's club on a user row (null below every club). */
+export type UserClub = { id: number; name: string; color: string; active_days: number };
+
+/** The running strip on this branch's user home page. */
+export type BranchTicker = {
+  branch_id: number;
+  enabled: boolean;
+  text: string;
+  updated_by: string | null;
+  updated_at: string | null;
+  max_length: number;
 };

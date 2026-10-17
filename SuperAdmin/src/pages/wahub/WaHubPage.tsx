@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/Feedback";
 import { IconAlert, IconGlobe2 } from "@/components/icons";
 import { WaNotice } from "@/components/wahub/WaPill";
 import WaErrorState from "@/components/wahub/WaErrorState";
-import { count, waErrorCode, waErrorMessage } from "@/components/wahub/waFormat";
+import { coinRate, coinsLabel, count, rateLabel, waErrorCode, waErrorMessage } from "@/components/wahub/waFormat";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { usePageVisible } from "@/hooks/usePageVisible";
 import { useGetWaConnectionsQuery, useGetWaUsageQuery } from "@/services/api";
@@ -158,10 +158,14 @@ function UsageCard({
           <Stat
             label="Sent today"
             value={count(usage?.today.sent)}
-            detail={`${count(usage?.today.coins)} coins`}
+            detail={coinsLabel(usage?.today.coins)}
           />
           <Stat label="Sent this month" value={count(usage?.month.sent)} />
-          <Stat label="Coins this month" value={count(usage?.month.coins)} detail="1 coin per message sent" />
+          <Stat
+            label="Coins this month"
+            value={coinsLabel(usage?.month.coins)}
+            detail={rateLabel(coinRate(usage?.coins_per_message))}
+          />
           <Stat
             label="Branches connected"
             value={connections ? `${linked} / ${total}` : "—"}

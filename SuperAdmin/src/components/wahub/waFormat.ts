@@ -10,7 +10,7 @@ import type {
   PaginationMeta,
 } from "@/types/api";
 import { resolveErrorMessage } from "@/utils/errors";
-import { inr } from "@/utils/format";
+import { inr, toNumber } from "@/utils/format";
 
 export type WaTone = "neutral" | "pos" | "neg" | "warn" | "info" | "accent";
 
@@ -79,6 +79,33 @@ export const maskNumber = (raw?: string | null): string => {
 };
 
 export const count = (value?: number | null) => inr(value ?? 0);
+
+// ── Coins ───────────────────────────────────────────────────────────────────
+
+// Coins can be fractions (0.25 per message), so never round them like counts.
+const coinFormat = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
+
+/** Coins with up to 2 decimals: "0.25", "32.5", "1,240". */
+export const coins = (value?: number | string | null) => coinFormat.format(toNumber(value));
+
+/** "1 coin" / "0.25 coins" / "32.5 coins". */
+export const coinsLabel = (value?: number | string | null) => {
+  const amount = toNumber(value);
+  return `${coins(amount)} ${amount === 1 ? "coin" : "coins"}`;
+};
+
+/** What one sent message costs when the backend has not said (Control's WA Hub Out default). */
+export const DEFAULT_COINS_PER_MESSAGE = 0.25;
+
+/** The backend's `coins_per_message`, or the default while it is missing. */
+export const coinRate = (value?: number | string | null): number => {
+  if (value === null || value === undefined || value === "") return DEFAULT_COINS_PER_MESSAGE;
+  const rate = Number(value);
+  return Number.isFinite(rate) && rate >= 0 ? rate : DEFAULT_COINS_PER_MESSAGE;
+};
+
+/** "0.25 coins per message". */
+export const rateLabel = (rate: number) => `${coinsLabel(rate)} per message`;
 
 // ── Events and messages ─────────────────────────────────────────────────────
 

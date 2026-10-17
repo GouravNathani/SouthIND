@@ -219,6 +219,14 @@ class User extends Authenticatable
         return $this->belongsToMany(Tag::class, 'tag_user');
     }
 
+    /**
+     * The club the system put this user in (none below the lowest club).
+     */
+    public function clubMembership()
+    {
+        return $this->hasOne(ClubMember::class);
+    }
+
     // ---- Referral -------------------------------------------------------
 
     /** The agent this user was referred by. Always in the same branch. */

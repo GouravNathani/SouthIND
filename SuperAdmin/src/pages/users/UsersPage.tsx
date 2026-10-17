@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import SuperShell from "@/components/SuperShell";
 import { useBranch } from "@/components/BranchContext";
+import ClubBadge from "@/components/ClubBadge";
 import Pagination from "@/components/Pagination";
 import UserSortControl from "@/components/UserSortControl";
 import Card from "@/components/ui/Card";
@@ -13,6 +15,7 @@ import { IconChevronDown } from "@/components/icons";
 import { ErrorNote } from "@/components/ui/Feedback";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import {
+  useGetBranchClubsQuery,
   useGetUsersPageQuery,
   useMoveUserBranchMutation,
   useResetUserMpinMutation,
@@ -44,7 +47,20 @@ export default function UsersPage() {
     return () => window.clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => setPage(1), [debouncedSearch, status, sortBy, reverse, branchId]);
+  // Clubs belong to one branch: the filter shows while a branch is picked in
+  // the header. "View users" on the Clubs page arrives with ?club=<id>.
+  const [searchParams] = useSearchParams();
+  const clubParam = searchParams.get("club") ?? "";
+  const [club, setClub] = useState(clubParam === "none" || /^\d+$/.test(clubParam) ? clubParam : "");
+  const { data: branchClubs } = useGetBranchClubsQuery(branchId ?? 0, { skip: branchId === null });
+  const clubs = branchId === null ? [] : (branchClubs?.data ?? []);
+  const lastBranch = useRef(branchId);
+  useEffect(() => {
+    if (lastBranch.current !== branchId) setClub("");
+    lastBranch.current = branchId;
+  }, [branchId]);
+
+  useEffect(() => setPage(1), [debouncedSearch, status, sortBy, reverse, branchId, club]);
 
   const params = useMemo(
     () => ({
@@ -55,8 +71,9 @@ export default function UsersPage() {
       status: status || undefined,
       sort_by: sortBy === "newest" ? undefined : sortBy,
       reverse: reverse || undefined,
+      clubId: club === "" ? undefined : club === "none" ? ("none" as const) : Number(club),
     }),
-    [page, branchId, debouncedSearch, status, sortBy, reverse]
+    [page, branchId, debouncedSearch, status, sortBy, reverse, club]
   );
 
   const { data, isFetching, error } = useGetUsersPageQuery(params);
@@ -114,6 +131,7 @@ export default function UsersPage() {
               style={{ background: isActiveNow(row.last_seen_at) ? "var(--pos)" : "var(--text-faint)" }}
             />
             <span className="truncate font-medium text-text">{row.name || "Unnamed"}</span>
+            {row.club ? <ClubBadge club={row.club} /> : null}
           </span>
           <span className="tabular block truncate text-xs text-faint">
             {row.play_id ?? row.unique_number ?? row.phone ?? ""}
@@ -248,6 +266,20 @@ export default function UsersPage() {
               onReverse={() => setReverse((value) => !value)}
               className="sm:col-span-2"
             />
+            {clubs.length ? (
+              <Segmented
+                label="Club"
+                value={club}
+                onChange={setClub}
+                breakAfter={3}
+                className="sm:col-span-2 lg:col-span-4"
+                options={[
+                  { value: "", label: "All" },
+                  ...clubs.map((entry) => ({ value: String(entry.id), label: entry.name })),
+                  { value: "none", label: "No club" },
+                ]}
+              />
+            ) : null}
           </div>
         </Card>
 

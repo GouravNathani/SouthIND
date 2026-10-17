@@ -14,6 +14,7 @@ use App\Support\Push\UserPushNotifier;
 use App\Support\Query\DurationAggregate;
 use App\Support\Referral\CommissionAccrual;
 use App\Support\ResolvesBranch;
+use App\Support\Club\ClubAssigner;
 use App\Support\WaHub\WaHubNotifier;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -261,6 +262,9 @@ class DepositController extends Controller
 
         // WhatsApp to the user (queued; never throws).
         WaHubNotifier::depositStatus($deposit, $request->user());
+
+        // An approved deposit can move the user up a club (never throws).
+        ClubAssigner::refreshUserQuietly($deposit->user_id);
 
         // Clear user cache (new keying) and legacy play_id cache to avoid stale data
         DepositCache::forgetForPlay($deposit->user_id ? 'user:' . $deposit->user_id : null);

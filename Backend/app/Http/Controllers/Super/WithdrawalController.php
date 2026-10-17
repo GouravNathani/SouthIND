@@ -10,6 +10,7 @@ use App\Support\StatusTransition;
 use App\Support\Cache\WithdrawalCache;
 use App\Support\Push\UserPushNotifier;
 use App\Support\Query\DurationAggregate;
+use App\Support\Club\ClubAssigner;
 use App\Support\WaHub\WaHubNotifier;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -193,6 +194,9 @@ class WithdrawalController extends Controller
 
         // WhatsApp to the user (queued; never throws).
         WaHubNotifier::withdrawalStatus($withdrawal, $request->user());
+
+        // An approved withdrawal can move the user up a club (never throws).
+        ClubAssigner::refreshUserQuietly($withdrawal->user_id);
 
         WithdrawalCache::forgetForPlay($withdrawal->user_id ? 'user:' . $withdrawal->user_id : null);
         WithdrawalCache::forgetForPlay($withdrawal->play_id);

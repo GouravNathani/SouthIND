@@ -127,6 +127,30 @@ class MonthlyPayoutTest extends TestCase
         return app(WalletService::class)->runMonthlyPayout($month);
     }
 
+    public function test_payout_start_at_never_bills_deposits_approved_before_it(): void
+    {
+        // The Adda import: everything approved before the cut-off was already
+        // billed to Adda's own wallet, including part of the cut-off month.
+        config(['payout.start_at' => '2026-08-10 00:00:00']);
+        $this->deposit('2026-08-05', 70000);                            // same month, before the cut-off
+
+        $result = $this->bill();
+
+        $this->assertCount(1, $this->deductions);
+        $this->assertStringEndsWith('-month-2026-08', $this->deductions[0]['reference']);
+        $this->assertSame(1000.0, $this->deductions[0]['amount']);  // only 2,00,000 x 0.5%
+        $this->assertSame(0, $result['owed']);
+    }
+
+    public function test_a_malformed_payout_start_at_bills_nothing_rather_than_everything(): void
+    {
+        config(['payout.start_at' => 'not-a-date']);
+
+        $this->bill();
+
+        $this->assertCount(0, $this->deductions);
+    }
+
     public function test_each_finished_month_is_deducted_once_from_the_start_month(): void
     {
         $result = $this->bill();

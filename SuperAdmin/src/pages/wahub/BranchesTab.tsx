@@ -9,6 +9,7 @@ import { IconClock } from "@/components/icons";
 import WaPill from "@/components/wahub/WaPill";
 import WaErrorState from "@/components/wahub/WaErrorState";
 import {
+  coinsLabel,
   connectionStatus,
   count,
   isReconnecting,
@@ -147,7 +148,7 @@ export default function BranchesTab({
         return (
           <span className="block min-w-0 whitespace-nowrap">
             <span className="tabular block text-sm text-text">{count(month.month_sent)} sent</span>
-            <span className="tabular block text-xs text-faint">{count(month.month_coins)} coins</span>
+            <span className="tabular block text-xs text-faint">{coinsLabel(month.month_coins)}</span>
           </span>
         );
       },

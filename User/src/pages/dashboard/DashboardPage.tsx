@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import AppShell from "@/components/AppShell";
 import BannerCarousel from "@/components/BannerCarousel";
 import WinnerRibbon from "@/components/WinnerRibbon";
+import HomeStrip from "@/components/HomeStrip";
 import PushSubscriptionManager from "@/components/PushSubscriptionManager";
 import PushPromptCard from "@/components/PushPromptCard";
 import Card, { CardTitle } from "@/components/ui/Card";
@@ -39,6 +40,7 @@ export default function DashboardPage() {
       subtitle={displayName ? t("dashboard.greeting", { name: displayName }) : undefined}
     >
       <div className="space-y-4">
+        <HomeStrip />
         <PushSubscriptionManager />
         <PushPromptCard />
         <WinnerRibbon />

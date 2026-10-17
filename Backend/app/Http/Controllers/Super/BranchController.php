@@ -12,6 +12,7 @@ use App\Models\Banner;
 use App\Models\Branch;
 use App\Support\Cache\AppSettingCache;
 use App\Support\Cache\BannerCache;
+use App\Support\Club\ClubAssigner;
 use App\Support\Referral\ReferralService;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -49,6 +50,13 @@ class BranchController extends Controller
         ]);
 
         $this->seedBranch($branch, $copyFrom, $request->user());
+
+        // Every branch starts with the default clubs (Diamond, Gold, Silver, Comeback).
+        try {
+            app(ClubAssigner::class)->seedDefaults($branch->id);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         if ($agentEnabled !== null) {
             $this->setAgentEnabled($branch, $agentEnabled, $request->user());

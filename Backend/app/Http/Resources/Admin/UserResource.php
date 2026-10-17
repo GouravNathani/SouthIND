@@ -39,6 +39,8 @@ class UserResource extends JsonResource
                 'name' => $tag->name,
                 'color' => $tag->color,
             ])->values()),
+            // The club the system put the user in (null below every club).
+            'club' => $this->whenLoaded('clubMembership', fn () => \App\Support\Club\ClubFilter::resource($this->resource)),
             'created_at' => $this->created_at,
             'last_seen_at' => $this->last_seen_at,
             'deposit_approved_total' => $depositApprovedTotal,

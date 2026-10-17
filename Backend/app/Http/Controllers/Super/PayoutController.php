@@ -6,6 +6,7 @@ use App\Support\Query\DateBucket;
 use App\Http\Controllers\Controller;
 use App\Models\Deposit;
 use App\Models\WalletMonthlyPayout;
+use App\Support\Wallet\PayoutCutoff;
 use App\Support\Wallet\WalletService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -226,9 +227,9 @@ class PayoutController extends Controller
      */
     private function approvedDepositQuery($branchId)
     {
-        return Deposit::query()
+        return PayoutCutoff::apply(Deposit::query()
             ->where('status', Deposit::STATUS_APPROVED)
-            ->when($branchId, fn ($query) => $query->where('branch_id', $branchId));
+            ->when($branchId, fn ($query) => $query->where('branch_id', $branchId)));
     }
 
     private function payout(float $approvedTotal, float $percent): float

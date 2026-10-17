@@ -445,7 +445,8 @@ class WaHubProxyTest extends TestCase
             ->assertOk()
             ->assertJsonPath('today.sent', 4)
             ->assertJsonPath('by_connection.0.branch_id', $this->ctx['branch']->id)
-            ->assertJsonPath('by_connection.0.branch_name', $this->ctx['branch']->name);
+            ->assertJsonPath('by_connection.0.branch_name', $this->ctx['branch']->name)
+            ->assertJsonPath('coins_per_message', 0.25);
 
         Http::assertSent(fn (Request $r) => self::hubPath($r) === '/v1/usage' && self::hubQuery($r) === []);
     }

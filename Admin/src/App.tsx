@@ -18,6 +18,7 @@ import WinnerStreakHistoryPage from "@/pages/winner/WinnerStreakHistoryPage";
 import SupportPage from "@/pages/support/SupportPage";
 import WhatsAppInboxPage from "@/pages/whatsapp/WhatsAppInboxPage";
 import WaHubPage from "@/pages/wahub/WaHubPage";
+import ClubsPage from "@/pages/clubs/ClubsPage";
 import ReferralPage from "@/pages/referral/ReferralPage";
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
 
         <Route path="/users" element={<UsersPage />} />
         <Route path="/users/:id" element={<UserDetailPage />} />
+        <Route path="/clubs" element={<ClubsPage />} />
 
         {/* /new must precede /:id or "new" is parsed as an account id. */}
         <Route path="/accounts" element={<AccountsPage />} />

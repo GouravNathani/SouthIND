@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ProxiesWaHub;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Support\WaHub\WaHubClient;
+use App\Support\WaHub\WaHubRate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -82,13 +83,17 @@ class WaHubController extends Controller
         );
     }
 
+    /** Usage across branches, plus the wallet's current rate per message. */
     public function usage(): JsonResponse
     {
         $branches = $this->branchNames();
 
         return $this->proxy(
             fn () => $this->hub->usage(),
-            fn (array $data): array => $this->withBranch($data, 'by_connection', 'connection', $branches),
+            fn (array $data): array => [
+                ...$this->withBranch($data, 'by_connection', 'connection', $branches),
+                'coins_per_message' => WaHubRate::coinsPerMessage(),
+            ],
         );
     }
 

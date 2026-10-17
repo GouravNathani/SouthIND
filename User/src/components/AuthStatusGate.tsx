@@ -93,7 +93,7 @@ export default function AuthStatusGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (token) return;
-    if (location.pathname === "/" || location.pathname === "/login") return;
+    if (location.pathname === "/" || location.pathname === "/login" || location.pathname === "/sso") return;
     navigate("/", { replace: true });
   }, [location.pathname, navigate, token]);
 

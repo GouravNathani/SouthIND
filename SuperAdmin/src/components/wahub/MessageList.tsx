@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { WaMessage } from "@/types/api";
 import { EmptyState, Skeleton } from "@/components/ui/Feedback";
 import MessageStatus from "@/components/wahub/MessageStatus";
-import { maskNumber, messageTypeLabel } from "@/components/wahub/waFormat";
+import { coins as formatCoins, maskNumber, messageTypeLabel } from "@/components/wahub/waFormat";
 import { formatDateTime } from "@/utils/dateTime";
 
 const PREVIEW_CHARS = 90;
@@ -88,7 +88,7 @@ export default function MessageList({
   );
 
   const coins = (row: WaMessage) => (
-    <span className={["tabular", row.coins ? "text-text" : "text-faint"].join(" ")}>{row.coins}</span>
+    <span className={["tabular", Number(row.coins) ? "text-text" : "text-faint"].join(" ")}>{formatCoins(row.coins)}</span>
   );
 
   return (
@@ -168,7 +168,7 @@ export default function MessageList({
                   .join(" · ")}
               </span>
               <span className="shrink-0">
-                {coins(row)} {row.coins === 1 ? "coin" : "coins"}
+                {coins(row)} {Number(row.coins) === 1 ? "coin" : "coins"}
               </span>
             </div>
           </li>

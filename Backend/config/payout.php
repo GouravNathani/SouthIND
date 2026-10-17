@@ -30,4 +30,18 @@ return [
     |
     */
     'start_month' => env('PAYOUT_START_MONTH', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payout start moment
+    |--------------------------------------------------------------------------
+    |
+    | Exact cut-off (app timezone, "YYYY-MM-DD HH:MM:SS"): deposits approved
+    | before it are never billed and never shown in the payout views. Set at
+    | the Adda import (adda:import refuses to run without it), because the
+    | imported history was already billed to Adda's own wallet — without the
+    | cut-off the first monthly run would bill every Adda month again here.
+    |
+    */
+    'start_at' => env('PAYOUT_START_AT', ''),
 ];

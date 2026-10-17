@@ -796,7 +796,7 @@ class WalletService
 
     private function approvedDeposits()
     {
-        return Deposit::query()->where('status', Deposit::STATUS_APPROVED);
+        return PayoutCutoff::apply(Deposit::query()->where('status', Deposit::STATUS_APPROVED));
     }
 
     /**

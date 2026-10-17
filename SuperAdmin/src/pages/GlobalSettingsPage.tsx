@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import SuperShell from "@/components/SuperShell";
+import TickersCard from "@/components/TickersCard";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
@@ -207,6 +208,9 @@ export default function GlobalSettingsPage() {
           Save global settings
         </Button>
       </form>
+      <div className="mt-4">
+        <TickersCard />
+      </div>
     </SuperShell>
   );
 }

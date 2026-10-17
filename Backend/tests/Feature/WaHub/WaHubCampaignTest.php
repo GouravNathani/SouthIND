@@ -147,7 +147,9 @@ class WaHubCampaignTest extends TestCase
             ->assertExactJson([
                 'total' => 2,
                 'skipped' => ['no_phone' => 1, 'duplicate' => 1, 'inactive' => 1],
-                'coins' => 2,
+                // 2 recipients × the default WA Hub rate (0.25 coins per message).
+                'coins' => 0.5,
+                'coins_per_message' => 0.25,
                 'sample' => [
                     ['id' => $this->users['asha']->id, 'name' => 'Asha', 'phone_masked' => '91******0001'],
                     ['id' => $this->users['bala']->id, 'name' => 'Bala', 'phone_masked' => '91******0002'],

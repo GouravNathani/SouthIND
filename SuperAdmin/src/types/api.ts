@@ -147,6 +147,7 @@ export type SupportThread = {
 
 export type UserRecord = {
   id: number;
+  club?: UserClub | null;
   name?: string | null;
   phone?: string | null;
   username?: string | null;
@@ -1216,6 +1217,8 @@ export type WaUsage = {
     branch_id?: number | null;
     branch_name?: string | null;
   }[];
+  /** Coins one sent message costs (the wallet's WA Hub Out rate). */
+  coins_per_message?: number;
 };
 
 export type WaUsageRow = WaUsage["by_connection"][number];
@@ -1226,3 +1229,49 @@ export type WaBranchConnection = WaConnection & { branch_id: number; branch_name
 export type WaSuperMessagesQuery = WaMessagesQuery & { branch_id?: number };
 
 export type WaSuperCampaignsQuery = { branch_id?: number; page?: number; per_page?: number };
+
+// ── Clubs (the system sorts users into them) and the home-page strip ────────
+
+/** An activity tier of one branch. */
+export type Club = {
+  id: number;
+  branch_id: number;
+  name: string;
+  color: string;
+  /** Active days (approved deposit/withdrawal) needed in the club window. */
+  min_active_days: number;
+  members_count: number;
+};
+
+export type ClubsMeta = {
+  window_days: number;
+  users_total: number;
+  members_total: number;
+  without_club: number;
+  refreshed_at: string | null;
+};
+
+/** One branch's clubs (GET /clubs?branch_id=…). */
+export type ClubsResponse = { data: Club[]; meta: ClubsMeta };
+
+/** Every branch, one block each (GET /clubs). */
+export type ClubsAllResponse = {
+  data: ({ branch_id: number; branch_name: string } & ClubsResponse)[];
+  meta: { window_days: number };
+};
+
+export type ClubInput = { name: string; color: string; min_active_days: number };
+
+/** The user's club on a user row (null below every club). */
+export type UserClub = { id: number; name: string; color: string; active_days: number };
+
+/** One branch's running strip on the user home page. */
+export type BranchTicker = {
+  branch_id: number;
+  branch_name: string;
+  enabled: boolean;
+  text: string;
+  updated_by: string | null;
+  updated_at: string | null;
+  max_length: number;
+};

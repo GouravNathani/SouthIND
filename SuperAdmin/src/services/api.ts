@@ -11,6 +11,11 @@ import { isWaHubOffError } from "../utils/errors";
 import type {
   AccountRecord,
   AdminRecord,
+  BranchTicker,
+  Club,
+  ClubInput,
+  ClubsAllResponse,
+  ClubsResponse,
   AppSettings,
   BannerRecord,
   BranchRecord,
@@ -176,6 +181,8 @@ export const api = createApi({
   reducerPath: "api",
   baseQuery: withInFlightDedup(baseQueryWithCsrfRetry),
   tagTypes: [
+    "Clubs",
+    "Tickers",
     "BonusCodes",
     "BonusRedemptions",
     "Me",
@@ -604,6 +611,8 @@ export const api = createApi({
           status?: string;
           sort_by?: string;
           reverse?: boolean;
+          /** A club id, or "none" for users below every club. */
+          clubId?: number | "none";
         }
       | void
     >({
@@ -616,6 +625,7 @@ export const api = createApi({
         if (args?.status) params.status = args.status;
         if (args?.sort_by) params.sort_by = args.sort_by;
         if (args?.reverse) params.reverse = 1;
+        if (args?.clubId !== undefined) params.club_id = args.clubId;
         return {
           url: "/users",
           params: Object.keys(params).length ? params : undefined,
@@ -1530,6 +1540,58 @@ export const api = createApi({
       transformResponse: (response: unknown) => toWaPage<WaCampaign>(response),
       providesTags: ["WaCampaigns"],
     }),
+    // ── Clubs (the system sorts users into them) and the home-page strip ────
+    getBranchClubs: builder.query<ClubsResponse, number>({
+      query: (branchId) => ({ url: "/clubs", params: { branch_id: branchId } }),
+      providesTags: ["Clubs"],
+    }),
+    getAllClubs: builder.query<ClubsAllResponse, void>({
+      query: () => "/clubs",
+      providesTags: ["Clubs"],
+    }),
+    // One branch (`branch_id`) or every branch (`all_branches: true`).
+    createClub: builder.mutation<
+      { data: Club[]; meta: { skipped_branch_ids: number[] } },
+      ClubInput & { branch_id?: number; all_branches?: boolean }
+    >({
+      query: (body) => ({ url: "/clubs", method: "POST", body }),
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    updateClub: builder.mutation<unknown, ClubInput & { id: number }>({
+      query: ({ id, ...body }) => ({ url: `/clubs/${id}`, method: "PUT", body }),
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    deleteClub: builder.mutation<unknown, number>({
+      query: (id) => ({ url: `/clubs/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    addDefaultClubs: builder.mutation<{ data: { created: number } }, { branch_id?: number; all_branches?: boolean }>({
+      query: (body) => ({ url: "/clubs/defaults", method: "POST", body }),
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    refreshClubs: builder.mutation<unknown, { branch_id?: number }>({
+      query: (body) => ({ url: "/clubs/refresh", method: "POST", body }),
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    // A new window changes everyone's day count, so everyone is sorted again.
+    updateClubWindow: builder.mutation<{ data: { window_days: number } }, number>({
+      query: (windowDays) => ({ url: "/clubs/settings", method: "PUT", body: { window_days: windowDays } }),
+      invalidatesTags: ["Clubs", { type: "Users", id: "LIST" }],
+    }),
+    getTickers: builder.query<BranchTicker[], void>({
+      query: () => "/tickers",
+      transformResponse: (response: { data?: BranchTicker[] } | BranchTicker[]) =>
+        unwrapData<BranchTicker[]>(response),
+      providesTags: ["Tickers"],
+    }),
+    updateTicker: builder.mutation<unknown, { branchId: number; enabled: boolean; text: string }>({
+      query: ({ branchId, ...body }) => ({ url: `/tickers/${branchId}`, method: "PUT", body }),
+      invalidatesTags: ["Tickers"],
+    }),
+    updateAllTickers: builder.mutation<unknown, { enabled: boolean; text: string }>({
+      query: (body) => ({ url: "/tickers", method: "PUT", body }),
+      invalidatesTags: ["Tickers"],
+    }),
     getWaUsage: builder.query<WaUsage, void>({
       query: () => "/wa/usage",
       transformResponse: (response: unknown): WaUsage => {
@@ -1538,6 +1600,10 @@ export const api = createApi({
           today: { sent: Number(payload?.today?.sent ?? 0), coins: Number(payload?.today?.coins ?? 0) },
           month: { sent: Number(payload?.month?.sent ?? 0), coins: Number(payload?.month?.coins ?? 0) },
           by_connection: Array.isArray(payload?.by_connection) ? payload.by_connection : [],
+          coins_per_message:
+            payload?.coins_per_message === undefined || payload?.coins_per_message === null
+              ? undefined
+              : Number(payload.coins_per_message),
         };
       },
       providesTags: ["WaUsage"],
@@ -1724,4 +1790,15 @@ export const {
   useGetWaMessagesQuery,
   useGetWaCampaignsQuery,
   useGetWaUsageQuery,
+  useGetBranchClubsQuery,
+  useGetAllClubsQuery,
+  useCreateClubMutation,
+  useUpdateClubMutation,
+  useDeleteClubMutation,
+  useAddDefaultClubsMutation,
+  useRefreshClubsMutation,
+  useUpdateClubWindowMutation,
+  useGetTickersQuery,
+  useUpdateTickerMutation,
+  useUpdateAllTickersMutation,
 } = api;

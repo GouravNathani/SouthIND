@@ -17,6 +17,7 @@ import WalletPage from "@/pages/WalletPage";
 import PayoutPage from "@/pages/PayoutPage";
 import WhatsAppAccountsPage from "@/pages/WhatsAppAccountsPage";
 import WaHubPage from "@/pages/wahub/WaHubPage";
+import ClubsPage from "@/pages/clubs/ClubsPage";
 import BannerPage from "@/pages/banner/BannerPage";
 import BonusCodePage from "@/pages/bonus/BonusCodePage";
 import WinnerStreakPage from "@/pages/winner/WinnerStreakPage";
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/withdraw/:id" element={<WithdrawUpdatePage />} />
 
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/clubs" element={<ClubsPage />} />
 
           <Route path="/accounts" element={<AccountsPage />} />
           <Route path="/accounts/new" element={<NewAccountPage />} />

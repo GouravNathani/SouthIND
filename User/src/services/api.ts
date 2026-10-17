@@ -356,6 +356,10 @@ export const sindApi = createApi({
     login: builder.mutation<LoginResponse, LoginRequest>({
       query: (body) => ({ url: "auth/mpin-login", method: "POST", body }),
     }),
+    // Adda → SouthIND hand-off: a signed one-time ticket instead of phone + PIN.
+    ssoAdda: builder.mutation<LoginResponse, { ticket: string }>({
+      query: (body) => ({ url: "auth/sso/adda", method: "POST", body }),
+    }),
     checkBranch: builder.mutation<BranchCheckResponse, { phone: string }>({
       query: (body) => ({ url: "auth/check-branch", method: "POST", body }),
     }),
@@ -561,6 +565,7 @@ export const sindApi = createApi({
 
 export const {
   useLoginMutation,
+  useSsoAddaMutation,
   useCheckBranchMutation,
   useLogoutMutation,
   useVerifyMpinMutation,

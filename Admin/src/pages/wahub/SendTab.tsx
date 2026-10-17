@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { Tag, UserRecord, WaAudience, WaCampaign, WaCampaignPreview, WaConnection } from "@/types/api";
 import Card, { CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -14,6 +15,7 @@ import { WaNotice } from "@/components/wahub/WaPill";
 import WaErrorState from "@/components/wahub/WaErrorState";
 import {
   CAMPAIGN_RULES_HINT,
+  coinsLabel,
   count,
   istLocalNow,
   istLocalToIso,
@@ -22,11 +24,13 @@ import {
   waErrorCode,
   waErrorMessage,
 } from "@/components/wahub/waFormat";
+import { useWaCoinRate } from "@/components/wahub/useWaCoinRate";
 import { DEFAULT_CAMPAIGN_VARIABLES } from "@/pages/wahub/TemplatesTab";
 import { usePageVisible } from "@/hooks/usePageVisible";
 import {
   useCancelWaCampaignMutation,
   useCreateWaCampaignMutation,
+  useGetClubsQuery,
   useGetTagsQuery,
   useGetUsersQuery,
   useGetWaCampaignsQuery,
@@ -36,7 +40,20 @@ import {
 import { formatDateTime } from "@/utils/dateTime";
 
 type Source = "template" | "new";
-type AudienceType = "tags" | "users";
+type AudienceType = "tags" | "clubs" | "users";
+
+const AUDIENCE_HINT: Record<AudienceType, string> = {
+  tags: "Pick at least one tag.",
+  clubs: "Pick at least one club.",
+  users: "Pick at least one user.",
+};
+
+/** Ids from `?club=1,2` / `?tag=3` (Clubs page and tag shortcuts open the Send tab with them). */
+const idsFrom = (value: string | null): number[] =>
+  (value ?? "")
+    .split(",")
+    .map((part) => Number(part))
+    .filter((id) => Number.isInteger(id) && id > 0);
 type When = "now" | "later";
 type PickedUser = { id: number; name: string; detail: string };
 
@@ -75,8 +92,11 @@ export default function SendTab({
 // ── Compose ─────────────────────────────────────────────────────────────────
 
 function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection; onOpenTemplates: () => void }) {
+  const rate = useWaCoinRate();
   const templates = useGetWaTemplatesQuery();
   const tags = useGetTagsQuery();
+  const clubs = useGetClubsQuery();
+  const [params] = useSearchParams();
 
   const templateRows = useMemo(() => templates.data?.templates ?? [], [templates.data]);
   const variables = templates.data?.variables?.length ? templates.data.variables : DEFAULT_CAMPAIGN_VARIABLES;
@@ -91,8 +111,11 @@ function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection
   const [titleIsAuto, setTitleIsAuto] = useState(true);
 
   // Audience
-  const [audienceType, setAudienceType] = useState<AudienceType>("tags");
-  const [tagIds, setTagIds] = useState<number[]>([]);
+  const [audienceType, setAudienceType] = useState<AudienceType>(() =>
+    idsFrom(params.get("club")).length ? "clubs" : "tags"
+  );
+  const [tagIds, setTagIds] = useState<number[]>(() => idsFrom(params.get("tag")));
+  const [clubIds, setClubIds] = useState<number[]>(() => idsFrom(params.get("club")));
   const [picked, setPicked] = useState<PickedUser[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -128,9 +151,13 @@ function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection
       ? tagIds.length
         ? { type: "tags", tag_ids: [...tagIds].sort((a, b) => a - b) }
         : null
-      : picked.length
-        ? { type: "users", user_ids: picked.map((user) => user.id).sort((a, b) => a - b) }
-        : null;
+      : audienceType === "clubs"
+        ? clubIds.length
+          ? { type: "clubs", club_ids: [...clubIds].sort((a, b) => a - b) }
+          : null
+        : picked.length
+          ? { type: "users", user_ids: picked.map((user) => user.id).sort((a, b) => a - b) }
+          : null;
   const audienceKey = audience ? JSON.stringify(audience) : "";
   const freshPreview = preview && preview.key === audienceKey ? preview.data : null;
 
@@ -148,6 +175,9 @@ function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection
 
   const toggleTag = (id: number) =>
     setTagIds((prev) => (prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]));
+
+  const toggleClub = (id: number) =>
+    setClubIds((prev) => (prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]));
 
   const toggleUser = (user: UserRecord) =>
     setPicked((prev) =>
@@ -178,7 +208,7 @@ function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection
 
   const validate = (): string | null => {
     if (!hasMessage) return source === "template" ? "Pick a saved template." : "Write the message.";
-    if (!audience) return audienceType === "tags" ? "Pick at least one tag." : "Pick at least one user.";
+    if (!audience) return AUDIENCE_HINT[audienceType];
     if (!title.trim()) return "Give the campaign a name.";
     if (when === "later") {
       if (!sendAt) return "Pick a date and time.";
@@ -223,6 +253,7 @@ function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection
       setTitle("");
       setTitleIsAuto(true);
       setTagIds([]);
+    setClubIds([]);
       setPicked([]);
       setSearch("");
       setSendAt("");
@@ -239,12 +270,13 @@ function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection
   };
 
   const tagRows: Tag[] = tags.data ?? [];
+  const clubRows = clubs.data?.data ?? [];
   const userRows = users.data?.data ?? [];
   const userTotal = users.data?.meta?.total;
 
   return (
     <Card>
-      <CardTitle hint="1 coin per message sent">New campaign</CardTitle>
+      <CardTitle hint={`${coinsLabel(rate)} per message sent`}>New campaign</CardTitle>
       <div className="space-y-5">
         {connection.status !== "connected" ? (
           <WaNotice tone="warn" icon={<IconAlert size={14} />}>
@@ -367,12 +399,48 @@ function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection
             }}
             options={[
               { value: "tags", label: "Tags" },
+              { value: "clubs", label: "Clubs" },
               { value: "users", label: "Users" },
             ]}
             className="sm:max-w-sm"
           />
 
-          {audienceType === "tags" ? (
+          {audienceType === "clubs" ? (
+            clubs.isLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : clubs.error ? (
+              <ErrorNote>{waErrorMessage(clubs.error, "Could not load clubs.")}</ErrorNote>
+            ) : clubRows.length ? (
+              <ul className="flex min-w-0 flex-wrap gap-2">
+                {clubRows.map((club) => {
+                  const active = clubIds.includes(club.id);
+                  return (
+                    <li key={club.id} className="max-w-full">
+                      <button
+                        type="button"
+                        onClick={() => toggleClub(club.id)}
+                        aria-pressed={active}
+                        className="inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium"
+                        style={{
+                          borderColor: active ? club.color : "var(--border)",
+                          background: active ? `color-mix(in srgb, ${club.color} 18%, transparent)` : "var(--surface-2)",
+                          color: active ? club.color : "var(--text-muted)",
+                        }}
+                      >
+                        {active ? <IconCheck size={12} /> : (
+                          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: club.color }} />
+                        )}
+                        <span className="truncate">{club.name}</span>
+                        <span className="tabular opacity-70">{count(club.members_count)}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted">This branch has no clubs yet. Add them on the Clubs page.</p>
+            )
+          ) : audienceType === "tags" ? (
             tags.isLoading ? (
               <Skeleton className="h-10 w-full" />
             ) : tags.error ? (
@@ -515,7 +583,7 @@ function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection
             >
               Preview audience
             </Button>
-            {!audience ? <span className="text-xs text-faint">Pick {audienceType === "tags" ? "tags" : "users"} to see who gets it.</span> : null}
+            {!audience ? <span className="text-xs text-faint">Pick {audienceType} to see who gets it.</span> : null}
           </div>
 
           {previewError ? <ErrorNote>{previewError}</ErrorNote> : null}
@@ -530,7 +598,7 @@ function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection
                     · {count(skippedTotal(freshPreview))} skipped ({skippedDetail(freshPreview)})
                   </span>
                 ) : null}
-                <span className="text-muted"> · {count(freshPreview.coins)} coins</span>
+                <span className="text-muted"> · {coinsLabel(freshPreview.coins)}</span>
               </p>
               {freshPreview.sample?.length ? (
                 <ul className="mt-2 space-y-1">
@@ -619,8 +687,9 @@ function ComposeCard({ connection, onOpenTemplates }: { connection: WaConnection
         {freshPreview ? (
           <>
             <p>
-              <span className="font-semibold text-text">{count(freshPreview.coins)} coins</span> — 1 for each message
-              that is sent, to {count(freshPreview.total)} users.
+              <span className="font-semibold text-text">{coinsLabel(freshPreview.coins)}</span> —{" "}
+              {coinsLabel(freshPreview.coins_per_message ?? rate)} for each message that is sent, to{" "}
+              {count(freshPreview.total)} users.
               {skippedTotal(freshPreview) ? ` ${count(skippedTotal(freshPreview))} are skipped (${skippedDetail(freshPreview)}).` : ""}
             </p>
             <p className="text-xs text-faint">Goes out between 9 AM and 9 PM IST, a few messages a minute.</p>
